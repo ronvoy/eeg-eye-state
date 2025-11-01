@@ -31,7 +31,8 @@ Data Inspection:
 
 ## Phase 2: Data Preprocessing
 1. Target Variable Preparation:
-Convert the eyeDetection column from numeric {0, 1} to a categorical data type or factor. This confirms it's a classification problem.
+Convert the eyeDetection column from numeric {0, 1} to a categorical data {closed state, open state}. 
+This confirms it's a classification problem.
 2. Feature and Target Separation: Split the dataset into features 
 	- X: the 14 EEG channels 
 	- Y: the target variable (eyeDetection)
@@ -89,3 +90,12 @@ Several algorithms have been successfully tested on this dataset. Each has its s
 
 ## In summary (Conclusion):
 The data is used for predictive classification of eye states using multichannel EEG readings. Standard ML algorithms like Random Forest, SVM, Gradient Boosting, MLP, and CNN are all suitable and proven performers for this benchmark. Ensemble and deep learning approaches may deliver the highest accuracy, but tree-based models remain a robust, interpretable baseline
+
+# TODO:
+- Change eyeDetection from boolean to Categorical data
+- Find the ideal threshold for correlation *
+- Perform PCA / LDA on the set and analyse the result and plot in graph
+- Time series analysis (autocorrelation or some better approach?)
+- Proper Modelling Machine Learning Algorithm + Use Cross Entropy / BCE / Softmax / Gradient Descent
+- Performance Metrics (F1/ Recall / Confusion Matrix)
+- Prepare report slide
