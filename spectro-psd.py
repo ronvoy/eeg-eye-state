@@ -6,7 +6,7 @@ import os
 
 # --- Data Loading and Setup ---
 try:
-    df = pd.read_csv('eeg_data.csv')
+    df = pd.read_csv('dataset/eeg_data.csv')
 except FileNotFoundError:
     print("Error: eeg_data.csv not found. Please ensure the file is in the current directory.")
     exit()
