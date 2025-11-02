@@ -3,11 +3,11 @@ import numpy as np
 import os
 
 # Paths
-input_path = "dataset/eeg_data.csv"
-output_path = "output/eeg_cleaned.csv"
+input_path = "dataset/eeg_data_og.csv"
+output_path = "dataset/eeg_data.csv"
 
 # Ensure output folder exists
-os.makedirs("output", exist_ok=True)
+os.makedirs("dataset", exist_ok=True)
 
 # Load EEG dataset
 df = pd.read_csv(input_path)
