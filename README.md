@@ -1,5 +1,13 @@
 # Classiying eye state using the EEG features:
 
+Dataset Analysis / Loading and Parsing
+Dataset Inspection -> Separate Feature / Target Value
+Data Validation
+Missing Data fill by N/A
+Data Cleaning (remove outlier / scaling)
+Data (Uni/Bivariate) Visualization (spike value b/a analysis via spectrogram) 
+PCA / LDA performn (Identify redundant Feature Column w/ correlation >.8)
+
 ## Exploratory Data Analysis (EDA):
 
 * Dataset description:
@@ -10,6 +18,14 @@
 	- Unit: microvolts (µV) [Feature Columns] / boolean {0,1} [Target Variable]
 	- Sampling Rate: 128 Hz (i.e. 128 row of data / second)
 	- Dataset Dimension: 14980 rows (data) x 15 column (feature)
+		
+	The numeric values in the EEG Eye State dataset represent microvolts, which are the amplitude of the raw EEG signal measurements. 
+	
+	Measurement: They are time-domain, continuous EEG measurements taken from 14 electrodes on an Emotiv EEG Neuroheadset.
+
+	Sampling Rate: The data was recorded at a sampling frequency of 128 Hz (128 samples per second).
+	
+	Duration: The total measurement duration was 117 seconds, resulting in 14,980 samples for each electrode channel.
 
 * Dataset Loading and Parsing:
 	
@@ -25,7 +41,7 @@
 		<p align="center">
 
 		| Column<br>(Electrode) | Description (Brain Region for Electrode / Probe Location) | Type  | Units |
-		|-----------------------|-----------------------------------------------------------|-------|-------|
+		|-----------------|-------------------------------------------------|-------|-------|
 		| AF3 | Frontal (Anterior Frontal) - Left front of the forehead, near the prefrontal cortex | Float | microvolts (µV) |
 		| F7  | Frontal (Lateral Frontal) - Left frontal lobe, near the temple                      | Float | microvolts (µV) |
 		| F3  | Frontal (Frontal Midline) - Left frontal lobe, above the eyebrow                    | Float | microvolts (µV) |
@@ -58,7 +74,7 @@
 		<p align="center">
 
 		| Column	   | Description 												    | Type 	  | Unit		|
-		|--------------|----------------------------------------------------------------|---------|-------------|
+		|--------------|-------------------------------|---------|-------------|
 		| eyeDetection | Resembles state of eye, either opened ('1') or closed ('0')	| Boolean | N/A			|
 		
 		</p>
@@ -99,9 +115,23 @@
 	
 		Since we already have the target variable in boolean, we convert the eyeDetection column from numeric {0, 1} to a categorical data {closed state, open state}, which confirms it's a classification problem
 
+* Data Overview:
+	- Since the data is a temporal and based on signal, we make a spectrogram to get the overview of the raw data of signal (power / frequency) value over its full time scale (i.e. 117 second), which we get in a collage as given below:
+
+	<p align="center">
+		<img src="./plots-spike/spectrograms/collage_output.jpg">
+	</p>
+	<p align="center">
+		<img src="./plots-spike/spectrograms/collage_output_marking.jpg">
+	</p>
+
+	- What we realize is there's a similar spike in the values reading of the electrode at similar time between 0-20 second and 80 - ~100 second timeframe.
+	- This part of investigation was cruicial to know due to uncertainity that if the data gets eliminated as an outlier could mean critical loss of significant data as well and since all these spike occured at same duration meant the possibility of it be merely some random noise to be low from generic inference. 
+	- Hence, under domain specific knowledge base over data specification of instruments and neurophysiology, to know if such spike in value is normal in the instrument or from the brain waves (e) to be valid, it was found that such spike in values it to be part of external interference in the instruments or due to power fluctuation, thus we consider them as noise / outlier.
+
 * Data Cleaning:
 
-	- removal of identified outliers / incorrect data entries 
+	- removal of identified noise / outliers
 	- feature scaling - while not strictly required for initial EDA, scaling the features (e.g., using StandardScaler or MinMaxScaler) prepares the data for model training and makes the distributions comparable
 
 * Data Visualization:
@@ -125,11 +155,13 @@
 
 * Document Insights: 
 
-	Summarize key findings from the EDA phase, noting which channels seem most important, class imbalance issues, or interesting correlations, which will guide subsequent model selection and feature engineering efforts.
+	Summarize key findings from the EDA phase, 
+	- noting which channels seem most important, 
+	- class imbalance issues, or interesting correlations, which will guide subsequent model selection and feature engineering efforts.
 
-	The values, such as those around 4000 to 4600 in your example, correspond to these microvolt measurements [2]. The final attribute, eyeDetection, is a binary classification target where: 1 means the eye is open.0 means the eye is closed. The numeric values in the EEG Eye State dataset represent microvolts , which are the amplitude of the raw EEG signal measurements. The data is not in units of millivolts or frequency. Here's a summary of the data specifications: Units: The values are floating-point numbers representing the amplitude of the signal in microvolts (µV).Measurement: They are time-domain, continuous EEG measurements taken from 14 electrodes on an Emotiv EEG Neuroheadset.Sampling Rate: The data was recorded at a sampling frequency of 128 Hz (128 samples per second).Duration: The total measurement duration was 117 seconds, resulting in 14,980 samples for each electrode channel.
-
-	The EEG Eye State dataset at your link contains continuous EEG measurements from 14 channels, captured using an Emotiv EEG Neuroheadset, along with a binary “eye state” target indicating eye-open (`0`) or eye-closed (`1`). There are 14,980 records, each representing a moment in time, and the task is to .
+	The final attribute, eyeDetection, is a binary classification target where: 
+	- 1 means the eye is open
+	- 0 means the eye is closed
 
 * What the Data Represents:
 
@@ -141,6 +173,7 @@
 ## Machine Learning Algorithms
 
 * Several algorithms have been successfully tested on this dataset. Each has its strengths depending on the level of model complexity, interpretability, and data characteristics:
+
 	- Random Forest: Offers high accuracy, feature importance, and handles non-linear relationships well.
 	- Support Vector Machine (SVM): Works well for binary classification and high-dimensional spaces.
 	- Gradient Boosting (e.g., XGBoost): Often delivers top results for tabular data classification tasks.
