@@ -175,6 +175,24 @@ PCA / LDA performn (Identify redundant Feature Column w/ correlation >.8)
 		<p align="center">
 			<img src="./plots/psd/collage_output.jpg">
 		</p>
+
+		- Spectrogram Chart
+		
+		<p align="center">
+		<i>Figure: Eyes Closed</i>
+		</p>
+
+		<p align="center">
+			<img src="./plots/spectrograms/eyes_close/collage_output.jpg">
+		</p>
+
+		<p align="center">
+		<i>Figure: Eyes Closed</i>
+		</p>
+
+		<p align="center">
+			<img src="./plots/spectrograms/eyes_open/collage_output.jpg">
+		</p>
 		
 	2. Bivariate Analysis: Create correlation matrices (heatmaps) to understand the relationships between different electrode channels. Strong correlations can indicate redundant information or related brain activity areas. Use box plots or violin plots to visualize the distribution of each EEG channel's values across the two different eye states (open vs. closed). This helps determine which electrodes show the most significant difference between states.
 		- Correlation Heat Map
