@@ -62,7 +62,7 @@ PCA / LDA performn (Identify redundant Feature Column w/ correlation >.8)
 		<br>
 		
 		<p align="center">
-			<img src="dataset/electrode-positioning.png" alt="Electrode Positioning" />
+			<img src="dataset/emotiv-electrode-pos.jpg" alt="Electrode Positioning" />
 		</p>
 
 		<p align="center">
