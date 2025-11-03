@@ -129,6 +129,10 @@ PCA / LDA performn (Identify redundant Feature Column w/ correlation >.8)
 	- This part of investigation was cruicial to know due to uncertainity that if the it would get eliminated as an outlier, could mean critical loss of significant data and also since all these spike occured at approximately same duration meant the possibility of it be merely some random noise to be low from a generic perspective.
 	- Hence, under domain specific knowledge base over data specification of instruments and neurophysiology, to know if such spike in value is normal from the instrument or from the brain waves (electrical signals) to be valid, it was found that such spike in values it to be part of external interference in the instruments or due to power fluctuation, thus we consider them as noise / outlier.
 
+	<p align="center">
+		<img src="./plots-spike/psd/collage_output.jpg">
+	</p>
+
 * Data Cleaning:
 
 	Prepares the data for model training and makes the distributions comparable by:
@@ -138,12 +142,40 @@ PCA / LDA performn (Identify redundant Feature Column w/ correlation >.8)
 * Data Visualization:
 
 	1. Univariate Analysis: Plot histograms or density plots for each EEG channel to visualize the distribution of amplitude values. Visualize the class balance of the target variable using a bar chart or count plot (e.g., how many open vs. closed eye states).
+		
 		- Class Balance Diagram
-		- Histograms (KDE curve / density plots / line graphs) for amplitude distribution
-		- Box Plot / Violin Plot Diagram (Before / After Outlier removal)
-		- Bar Chart / Count Plot
-		- Scatter Plot Diagram
+		<p align="center">
+			<img src="./plots/classbased/class_balance_diagram.png">
+		</p>
+		
+		- Bar Chart / Histograms (with KDE curve / density plots / line graphs) for amplitude distribution
+		<p align="center">
+			<img src="./plots/histogram/raw/collage_output.jpg">
+		</p>
 
+		- Box Plot 
+		<p align="center">
+			<img src="./plots/boxplot/with_outliers/collage_output.jpg">
+		</p>
+		<p align="center">
+			<img src="./plots/boxplot/without_outliers/collage_output.jpg">
+		</p>
+
+		- Violin Plot Diagram (Before / After Outlier removal)
+		<p align="center">
+			<img src="./plots/violinplot/collage_output.jpg">
+		</p>
+		
+		- Scatter Plot Diagram
+		<p align="center">
+			<img src="./plots/scatterchart/collage_output.jpg">
+		</p>
+
+		- Power Spectral Density Chart
+		<p align="center">
+			<img src="./plots/psd/collage_output.jpg">
+		</p>
+		
 	2. Bivariate Analysis: Create correlation matrices (heatmaps) to understand the relationships between different electrode channels. Strong correlations can indicate redundant information or related brain activity areas. Use box plots or violin plots to visualize the distribution of each EEG channel's values across the two different eye states (open vs. closed). This helps determine which electrodes show the most significant difference between states.
 		- Correlation Heat Map
 
