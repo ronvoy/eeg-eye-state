@@ -2,16 +2,24 @@ import os
 import glob
 from PIL import Image
 import math
+import sys
 
 # --- Configuration ---
 # NOTE ON COMPRESSION: To achieve a noticeable file size reduction (like 50%),
 # we MUST switch to a lossy format like JPEG (.jpg) and use the 'quality' parameter.
 # PNG is lossless, yielding minimal file size changes on already-optimized images.
-OUTPUT_FILENAME = "./plots-with-spike/spectrograms/collage_output.jpg"  # Changed to JPEG
+# Allow passing the target directory as the first CLI argument:
+# Usage: python merge-png.py /path/to/dir
+if len(sys.argv) > 1:
+    DIRECTORY = sys.argv[1]
+else:
+    exit()
+OUTPUT_FILENAME = f"{DIRECTORY}/collage_output.jpg"  # Changed to JPEG
+
 JPEG_QUALITY = 50 # Set the compression quality (0=max compression/min quality, 95=min compression/max quality)
 PADDING = 1    # User-requested spacing
 
-def create_collage(directory="./plots-with-spike/spectrograms"):
+def create_collage(directory=f"{DIRECTORY}"):
     """
     Finds all PNG files in the specified directory, determines the largest
     dimensions to preserve resolution, resizes them, arranges them into

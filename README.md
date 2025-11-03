@@ -154,10 +154,11 @@ PCA / LDA performn (Identify redundant Feature Column w/ correlation >.8)
 
 ## Summarization:
 
-* Document Insights: 
+* Document Insights:
 
-	Summarize key findings from the EDA phase, 
-	- noting which channels seem most important, 
+	Summarize key findings from the EDA phase:
+	- Since we already have the target column and dataset, so it's evident that to be a classification problem
+	- Now we note, which channels (feature column) seem to be most important or correlated, 
 	- class imbalance issues, or interesting correlations, which will guide subsequent model selection and feature engineering efforts.
 
 	The final attribute, eyeDetection, is a binary classification target where: 
@@ -207,6 +208,7 @@ The data is used for predictive classification of eye states using multichannel 
 - Feature selection (e.g., PCA, correlation analysis) further improves performance and model simplicity.
 
 # TODOs:
+	- EDA Visualization of collage of dataset
 	- Change eyeDetection from boolean to Categorical data
 	- Find the ideal threshold for correlation *
 	- Perform PCA / LDA on the set and analyse the result and plot in graph
