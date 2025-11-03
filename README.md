@@ -126,13 +126,14 @@ PCA / LDA performn (Identify redundant Feature Column w/ correlation >.8)
 	</p>
 
 	- What we realize is there's a similar spike in the values reading of the electrode at similar time between 0-20 second and 80 - ~100 second timeframe.
-	- This part of investigation was cruicial to know due to uncertainity that if the data gets eliminated as an outlier could mean critical loss of significant data as well and since all these spike occured at same duration meant the possibility of it be merely some random noise to be low from generic inference. 
-	- Hence, under domain specific knowledge base over data specification of instruments and neurophysiology, to know if such spike in value is normal in the instrument or from the brain waves (e) to be valid, it was found that such spike in values it to be part of external interference in the instruments or due to power fluctuation, thus we consider them as noise / outlier.
+	- This part of investigation was cruicial to know due to uncertainity that if the it would get eliminated as an outlier, could mean critical loss of significant data and also since all these spike occured at approximately same duration meant the possibility of it be merely some random noise to be low from a generic perspective.
+	- Hence, under domain specific knowledge base over data specification of instruments and neurophysiology, to know if such spike in value is normal from the instrument or from the brain waves (electrical signals) to be valid, it was found that such spike in values it to be part of external interference in the instruments or due to power fluctuation, thus we consider them as noise / outlier.
 
 * Data Cleaning:
 
+	Prepares the data for model training and makes the distributions comparable by:
 	- removal of identified noise / outliers
-	- feature scaling - while not strictly required for initial EDA, scaling the features (e.g., using StandardScaler or MinMaxScaler) prepares the data for model training and makes the distributions comparable
+	- feature scaling - while not strictly required for initial EDA, scaling the features (e.g., using StandardScaler or MinMaxScaler) 
 
 * Data Visualization:
 
