@@ -1,0 +1,75 @@
+graph TB
+    
+    %% PCA Branch
+    PCA --> PCA1["Standardize Data<br/>Center & Scale Features"]
+    PCA1 --> PCA2["Compute Covariance Matrix<br/>C = X^T X / n"]
+    PCA2 --> PCA3["Eigenvalue Decomposition<br/>Find eigenvectors & eigenvalues"]
+    PCA3 --> PCA4["Sort by Eigenvalues<br/>Descending order"]
+    PCA4 --> PCA5["Select Top k Components<br/>Based on variance threshold"]
+    PCA5 --> PCA6["Project Data<br/>Z = X W"]
+    PCA6 --> PCAEnd(["PCA Complete:<br/>Linear, Orthogonal<br/>Components"])
+    
+    %% LDA Branch
+    LDA --> LDA1["Separate Data by Class<br/>Using labels y"]
+    LDA1 --> LDA2["Compute Class Means<br/>μ₁, μ₂, ..., μc"]
+    LDA2 --> LDA3["Calculate Scatter Matrices<br/>Within-class Sw & Between-class Sb"]
+    LDA3 --> LDA4["Solve Generalized Eigenvalue Problem<br/>Sb w = λ Sw w"]
+    LDA4 --> LDA5["Select Top k ≤ c-1 Eigenvectors<br/>Max class-1 components"]
+    LDA5 --> LDA6["Project Data<br/>Z = X W"]
+    LDA6 --> LDAEnd(["LDA Complete:<br/>Maximizes Class<br/>Separability"])
+    
+    %% ICA Branch
+    ICA --> ICA1["Center Data<br/>Remove mean"]
+    ICA1 --> ICA2["Whiten Data<br/>Decorrelate & normalize variance"]
+    ICA2 --> ICA3["Random Initialization<br/>Initialize unmixing matrix W"]
+    ICA3 --> ICA4["FastICA Iteration<br/>Maximize non-Gaussianity"]
+    ICA4 --> ICA5{"Converged?<br/>Change < threshold"}
+    ICA5 -->|"No"| ICA4
+    ICA5 -->|"Yes"| ICA6["Extract Independent Components<br/>S = W X"]
+    ICA6 --> ICAEnd(["ICA Complete:<br/>Statistically<br/>Independent Sources"])
+    
+    %% CSP Branch
+    CSP --> CSP1["Split Data by Class<br/>X₁ class 1, X₂ class 2"]
+    CSP1 --> CSP2["Compute Covariance Matrices<br/>Σ₁, Σ₂ for each class"]
+    CSP2 --> CSP3["Composite Covariance<br/>Σc = Σ₁ + Σ₂"]
+    CSP3 --> CSP4["Whitening Transform<br/>P = Λ^-1/2 U^T"]
+    CSP4 --> CSP5["Generalized Eigendecomposition<br/>On whitened covariances"]
+    CSP5 --> CSP6["Select Extreme Components<br/>First m & Last m filters"]
+    CSP6 --> CSP7["Spatial Filtering<br/>Extract discriminative features"]
+    CSP7 --> CSPEnd(["CSP Complete:<br/>Class-Discriminative<br/>Spatial Patterns"])
+    
+    %% t-SNE Branch
+    TSNE --> TSNE1["Compute Pairwise Distances<br/>In high-dimensional space"]
+    TSNE1 --> TSNE2["Convert to Probabilities<br/>Gaussian similarity pᵢⱼ"]
+    TSNE2 --> TSNE3["Initialize Low-D Embedding<br/>Random or PCA initialization"]
+    TSNE3 --> TSNE4["Compute Low-D Similarities<br/>Student-t distribution qᵢⱼ"]
+    TSNE4 --> TSNE5["Calculate Gradient<br/>KL divergence KL P‖Q"]
+    TSNE5 --> TSNE6["Update Positions<br/>Gradient descent with momentum"]
+    TSNE6 --> TSNE7{"Max Iterations<br/>Reached?"}
+    TSNE7 -->|"No"| TSNE4
+    TSNE7 -->|"Yes"| TSNEEnd(["t-SNE Complete:<br/>Preserves Local<br/>Neighborhood"])
+    
+    %% UMAP Branch
+    UMAP --> UMAP1["Construct k-NN Graph<br/>Find nearest neighbors"]
+    UMAP1 --> UMAP2["Compute Fuzzy Simplicial Set<br/>Topological representation"]
+    UMAP2 --> UMAP3["Optimize Low-D Layout<br/>Initialize embedding"]
+    UMAP3 --> UMAP4["Stochastic Gradient Descent<br/>Minimize cross-entropy"]
+    UMAP4 --> UMAP5["Negative Sampling<br/>Repel distant points"]
+    UMAP5 --> UMAP6{"Converged or<br/>Max Epochs?"}
+    UMAP6 -->|"No"| UMAP4
+    UMAP6 -->|"Yes"| UMAPEnd(["UMAP Complete:<br/>Preserves Local &<br/>Global Structure"])
+    
+    style Start fill:#000000
+    style PCAEnd fill:#000000
+    style LDAEnd fill:#000000
+    style ICAEnd fill:#000000
+    style CSPEnd fill:#000000
+    style TSNEEnd fill:#000000
+    style UMAPEnd fill:#000000
+    
+    style PCA fill:#000000
+    style LDA fill:#000000
+    style ICA fill:#000000
+    style CSP fill:#000000
+    style TSNE fill:#000000
+    style UMAP fill:#000000
