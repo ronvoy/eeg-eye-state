@@ -3,13 +3,20 @@
 
 ---
 
+**Dataset Source:** [UCI Machine Learning Repository — EEG Eye State](https://archive.ics.uci.edu/dataset/264/eeg+eye+state)
+
+---
+
 
 ## Table of Contents
 
 1. [Data Description Overview](#1-data-description-overview)
-   - 1.1 [Dataset Loading](#11-dataset-loading)
-   - 1.2 [Basic Statistics](#12-basic-statistics)
-   - 1.3 [Class Distribution](#13-class-distribution)
+   - 1.1 [Dataset Citation & Source](#11-dataset-citation--source)
+   - 1.2 [Dataset Loading](#12-dataset-loading)
+   - 1.3 [Variable Classification](#13-variable-classification)
+   - 1.4 [Electrode Positions & Significance](#14-electrode-positions--significance)
+   - 1.5 [Basic Statistics](#15-basic-statistics)
+   - 1.6 [Class Distribution](#16-class-distribution)
 2. [Data Imputation](#2-data-imputation)
 3. [Data Visualization (Raw Data)](#3-data-visualization-raw-data)
    - 3.1 [Class Balance](#31-class-balance)
@@ -19,33 +26,34 @@
    - 3.5 [Violin Plots](#35-violin-plots)
 4. [Outlier Removal](#4-outlier-removal)
 5. [Data Visualization (After Outlier Removal)](#5-data-visualization-after-outlier-removal)
-   - 5.1 [Class Balance](#51-class-balance)
-   - 5.2 [Correlation Heatmap](#52-correlation-heatmap)
-   - 5.3 [Box Plots](#53-box-plots)
-   - 5.4 [Histograms](#54-histograms)
-   - 5.5 [Violin Plots](#55-violin-plots)
+   - 5.1 [Box Plots Comparison](#51-box-plots-comparison)
+   - 5.2 [Histograms After Cleaning](#52-histograms-after-cleaning)
 6. [Log-Normalization](#6-log-normalization)
-7. [Data Visualization (After Normalization)](#7-data-visualization-after-normalization)
-   - 7.1 [Class Balance](#71-class-balance)
-   - 7.2 [Correlation Heatmap](#72-correlation-heatmap)
-   - 7.3 [Box Plots](#73-box-plots)
-   - 7.4 [Histograms](#74-histograms)
-   - 7.5 [Violin Plots](#75-violin-plots)
+7. [Feature Engineering](#7-feature-engineering)
+   - 7.1 [Hemispheric Asymmetry](#71-hemispheric-asymmetry)
+   - 7.2 [Global Channel Statistics](#72-global-channel-statistics)
+   - 7.3 [Feature Summary](#73-feature-summary)
 8. [FFT, Spectrogram and PSD Analysis](#8-fft-spectrogram-and-psd-analysis)
    - 8.1 [FFT Frequency Spectrum](#81-fft-frequency-spectrum)
    - 8.2 [Power Spectral Density (PSD)](#82-power-spectral-density-psd)
    - 8.3 [Spectrogram Analysis](#83-spectrogram-analysis)
-9. [PCA and LDA Analysis](#9-pca-and-lda-analysis)
+9. [Dimensionality Reduction](#9-dimensionality-reduction)
    - 9.1 [PCA](#91-pca)
    - 9.2 [LDA](#92-lda)
-   - 9.3 [Clustering Evaluation](#93-clustering-evaluation)
+   - 9.3 [t-SNE](#93-t-sne)
+   - 9.4 [UMAP](#94-umap)
+   - 9.5 [Clustering Evaluation](#95-clustering-evaluation)
 10. [Machine Learning Classification](#10-machine-learning-classification)
-    - 10.1 [Logistic Regression](#101-logistic-regression)
-    - 10.2 [K-Nearest Neighbors](#102-k-nearest-neighbors)
-    - 10.3 [Support Vector Machine](#103-support-vector-machine)
-    - 10.4 [Random Forest](#104-random-forest)
-    - 10.5 [Gradient Boosting](#105-gradient-boosting)
-    - 10.6 [ML Model Comparison](#106-ml-model-comparison)
+    - 10.1 [Train/Test Split & Class Balance](#101-traintest-split--class-balance)
+    - 10.2 [Cross-Validation Results](#102-cross-validation-results)
+    - 10.3 [Logistic Regression](#103-logistic-regression)
+    - 10.4 [K-Nearest Neighbors](#104-k-nearest-neighbors)
+    - 10.5 [Support Vector Machine](#105-support-vector-machine)
+    - 10.6 [Random Forest](#106-random-forest)
+    - 10.7 [Gradient Boosting](#107-gradient-boosting)
+    - 10.8 [Feature Importance](#108-feature-importance)
+    - 10.9 [ROC Curves](#109-roc-curves)
+    - 10.10 [ML Model Comparison](#1010-ml-model-comparison)
 11. [Neural Network Classification](#11-neural-network-classification)
     - 11.1 [1D CNN on Raw EEG](#111-1d-cnn-on-raw-eeg)
     - 11.2 [CNN on Spectrograms](#112-cnn-on-spectrograms)
@@ -60,10 +68,15 @@
 
 # 1. Data Description Overview
 
-This section provides an overview of the EEG eye-state dataset collected using an Emotiv EPOC neuroheadset with 14 electrodes at a sampling rate of 128 Hz. The binary target variable `eyeDetection` indicates whether the subject's eyes were open (1) or closed (0).
+
+## 1.1 Dataset Citation & Source
+
+**Source:** [UCI Machine Learning Repository — EEG Eye State](https://archive.ics.uci.edu/dataset/264/eeg+eye+state)
+
+> All data is from one continuous EEG measurement with the Emotiv EEG Neuroheadset. The duration of the measurement was 117 seconds. The eye state was detected via a camera during the EEG measurement and added later manually to the file after analysing the video frames. '1' indicates the eye-closed and '0' the eye-open state. All values are in chronological order with the first measured value at the top of the data.
 
 
-## 1.1 Dataset Loading
+## 1.2 Dataset Loading
 
 The dataset is loaded from `dataset/eeg_data_og.csv`.
 
@@ -76,9 +89,59 @@ The dataset is loaded from `dataset/eeg_data_og.csv`.
 | Recording Duration | 117.0 seconds |
 
 
-## 1.2 Basic Statistics
+## 1.3 Variable Classification
 
-Descriptive statistics for all 14 EEG channels (micro-volts).
+**Numerical Variables (Continuous):** 14 EEG electrode channels recording voltage in micro-volts (uV).
+
+| Variable | Type | Description |
+| --- | --- | --- |
+| AF3 | Continuous (float64) | EEG voltage at AF3 electrode (uV) |
+| F7 | Continuous (float64) | EEG voltage at F7 electrode (uV) |
+| F3 | Continuous (float64) | EEG voltage at F3 electrode (uV) |
+| FC5 | Continuous (float64) | EEG voltage at FC5 electrode (uV) |
+| T7 | Continuous (float64) | EEG voltage at T7 electrode (uV) |
+| P7 | Continuous (float64) | EEG voltage at P7 electrode (uV) |
+| O1 | Continuous (float64) | EEG voltage at O1 electrode (uV) |
+| O2 | Continuous (float64) | EEG voltage at O2 electrode (uV) |
+| P8 | Continuous (float64) | EEG voltage at P8 electrode (uV) |
+| T8 | Continuous (float64) | EEG voltage at T8 electrode (uV) |
+| FC6 | Continuous (float64) | EEG voltage at FC6 electrode (uV) |
+| F4 | Continuous (float64) | EEG voltage at F4 electrode (uV) |
+| F8 | Continuous (float64) | EEG voltage at F8 electrode (uV) |
+| AF4 | Continuous (float64) | EEG voltage at AF4 electrode (uV) |
+
+**Categorical Variable (Target):**
+
+| Variable | Type | Values | Description |
+| --- | --- | --- | --- |
+| eyeDetection | Binary (int) | 0 = Open, 1 = Closed | Eye state detected via camera during recording |
+
+
+## 1.4 Electrode Positions & Significance
+
+The Emotiv EPOC headset uses a modified 10-20 international system for electrode placement. Each electrode captures electrical activity from a specific cortical region.
+
+| Electrode | 10-20 Position | Brain Region | Functional Significance |
+| --- | --- | --- | --- |
+| AF3 | Anterior Frontal Left | Prefrontal Cortex | Executive function, attention |
+| F7 | Frontal Left Lateral | Left Temporal-Frontal | Language processing |
+| F3 | Frontal Left | Left Frontal Lobe | Motor planning, positive affect |
+| FC5 | Fronto-Central Left | Left Motor-Frontal | Motor preparation |
+| T7 | Temporal Left | Left Temporal Lobe | Auditory processing, memory |
+| P7 | Parietal Left | Left Parietal-Temporal | Visual-spatial processing |
+| O1 | Occipital Left | Left Visual Cortex | Visual processing |
+| O2 | Occipital Right | Right Visual Cortex | Visual processing |
+| P8 | Parietal Right | Right Parietal-Temporal | Spatial attention |
+| T8 | Temporal Right | Right Temporal Lobe | Face / emotion recognition |
+| FC6 | Fronto-Central Right | Right Motor-Frontal | Motor preparation |
+| F4 | Frontal Right | Right Frontal Lobe | Motor planning, negative affect |
+| F8 | Frontal Right Lateral | Right Temporal-Frontal | Emotion, social cognition |
+| AF4 | Anterior Frontal Right | Prefrontal Cortex | Executive function, attention |
+
+
+## 1.5 Basic Statistics
+
+Descriptive statistics for all 14 EEG channels (uV).
 
 | Channel | Count | Mean | Std | Min | 25% | 50% | 75% | Max |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
@@ -98,362 +161,455 @@ Descriptive statistics for all 14 EEG channels (micro-volts).
 | AF4 | 14980 | 4416.44 | 5891.29 | 1366.15 | 4342.05 | 4354.87 | 4372.82 | 715897.00 |
 
 
-## 1.3 Class Distribution
+## 1.6 Class Distribution
 
-Distribution of the target variable `eyeDetection`.
+Distribution of the target variable `eyeDetection` (per UCI: 0 = open, 1 = closed).
 
 | Eye State | Count | Percentage |
 | --- | --- | --- |
-| Closed (0) | 8257 | 55.1% |
-| Open (1) | 6723 | 44.9% |
+| Open (0) | 8257 | 55.1% |
+| Closed (1) | 6723 | 44.9% |
 
 
 # 2. Data Imputation
 
-Data imputation handles missing or invalid values. Missing values are detected and filled using column-wise **median imputation** to preserve the statistical properties of each EEG channel.
+Missing values are detected and filled using column-wise **median imputation** to preserve the statistical properties of each EEG channel.
 
 **Result:** No missing values detected across any of the 14 EEG channels. The dataset is complete.
 
 
 # 3. Data Visualization (Raw Data)
 
-Visualizations help identify data distributions, correlations, and potential anomalies in the EEG signals.
+Visualizations of the raw EEG data before any preprocessing.
 
 
 ## 3.1 Class Balance
-
-The class-balance diagram shows the distribution of samples across eye states — essential for identifying potential class imbalance that may bias downstream classifiers.
 
 ![Class Balance](analysis-plots\class_balance_raw.png)
 
 
 ## 3.2 Correlation Heatmap
 
-The correlation heatmap reveals linear relationships between EEG channels. Highly correlated channels may carry redundant information, motivating dimensionality reduction (e.g., PCA).
+The correlation heatmap reveals linear relationships between EEG channels. Highly correlated channels may carry redundant information.
 
 ![Correlation Heatmap](analysis-plots\correlation_heatmap_raw.png)
 
 
 ## 3.3 Box Plots
 
-Box plots summarize the distribution of each channel and highlight potential outliers as points beyond the whiskers (1.5x IQR rule).
+Box plots highlight potential outliers beyond the 1.5x IQR whiskers.
 
 ![Box Plots](analysis-plots\boxplots_raw.png)
 
 
 ## 3.4 Histograms
 
-Histograms show the amplitude distribution for each EEG channel split by eye state. Deviations from normality or bimodal patterns indicate differences between open- and closed-eye signals.
+Amplitude distributions per channel split by eye state.
 
 ![Histograms](analysis-plots\histograms_raw.png)
 
 
 ## 3.5 Violin Plots
 
-Violin plots combine box-plot summaries with kernel density estimates, providing a richer view of the distribution shape for each channel across eye states.
+Violin plots combine box-plot summaries with kernel density estimates.
 
 ![Violin Plots](analysis-plots\violinplots_raw.png)
 
 
 # 4. Outlier Removal
 
-Outliers in EEG data often arise from muscle artifacts, electrode displacement, or external interference. This pipeline combines the **IQR method** (1.5x interquartile range) with the **5-sigma rule** (five standard deviations from the mean). The more conservative bound is applied to retain legitimate EEG variability while removing extreme values.
+Outliers in EEG data arise from muscle artifacts, electrode displacement, or external interference. An **iterative IQR method** (1.5x interquartile range) is applied in multiple passes until no further outliers remain, ensuring that new outliers exposed by earlier passes are also removed.
 
-| Channel | Lower Bound | Upper Bound |
+**Passes required:** 5 (converged when no further outliers found).
+
+| Channel | Lower Bound (Pass 1) | Upper Bound (Pass 1) |
 | --- | --- | --- |
 | AF3 | 4233.59 | 4358.71 |
-| F7 | 3942.31 | 4071.55 |
-| F3 | 4219.49 | 4301.54 |
-| FC5 | 4072.06 | 4168.46 |
-| T7 | 4308.70 | 4370.27 |
-| P7 | 4589.47 | 4648.99 |
-| O1 | 4019.49 | 4122.05 |
-| O2 | 4575.40 | 4653.32 |
-| P8 | 4163.08 | 4236.92 |
-| T8 | 4192.04 | 4267.96 |
-| FC6 | 4158.73 | 4242.81 |
-| F4 | 4238.45 | 4316.42 |
-| F8 | 4550.77 | 4657.44 |
-| AF4 | 4295.90 | 4418.97 |
+| F7 | 3945.89 | 4062.81 |
+| F3 | 4224.88 | 4292.56 |
+| FC5 | 4080.76 | 4152.57 |
+| T7 | 4310.50 | 4365.91 |
+| P7 | 4592.55 | 4643.86 |
+| O1 | 4021.53 | 4115.90 |
+| O2 | 4578.98 | 4648.71 |
+| P8 | 4165.39 | 4233.07 |
+| T8 | 4195.12 | 4262.83 |
+| FC6 | 4163.34 | 4235.14 |
+| F4 | 4243.33 | 4306.93 |
+| F8 | 4557.97 | 4644.08 |
+| AF4 | 4306.66 | 4401.03 |
 
 | Metric | Value |
 | --- | --- |
 | Original samples | 14980 |
-| Cleaned samples | 11853 |
-| Removed samples | 3127 |
-| Removal percentage | 20.9% |
+| Cleaned samples | 9695 |
+| Removed samples | 5285 |
+| Removal percentage | 35.3% |
+| Passes | 5 |
 
 
 # 5. Data Visualization (After Outlier Removal)
 
-Visualizations help identify data distributions, correlations, and potential anomalies in the EEG signals.
+Comparison of distributions before and after outlier removal.
 
 
-## 5.1 Class Balance
+## 5.1 Box Plots Comparison
 
-The class-balance diagram shows the distribution of samples across eye states — essential for identifying potential class imbalance that may bias downstream classifiers.
+Side-by-side box plots confirm outlier removal effectiveness.
 
-![Class Balance](analysis-plots\class_balance_cleaned.png)
-
-
-## 5.2 Correlation Heatmap
-
-The correlation heatmap reveals linear relationships between EEG channels. Highly correlated channels may carry redundant information, motivating dimensionality reduction (e.g., PCA).
-
-![Correlation Heatmap](analysis-plots\correlation_heatmap_cleaned.png)
+![Box Plots After Cleaning](analysis-plots\boxplots_cleaned.png)
 
 
-## 5.3 Box Plots
+## 5.2 Histograms After Cleaning
 
-Box plots summarize the distribution of each channel and highlight potential outliers as points beyond the whiskers (1.5x IQR rule).
-
-![Box Plots](analysis-plots\boxplots_cleaned.png)
-
-
-## 5.4 Histograms
-
-Histograms show the amplitude distribution for each EEG channel split by eye state. Deviations from normality or bimodal patterns indicate differences between open- and closed-eye signals.
-
-![Histograms](analysis-plots\histograms_cleaned.png)
-
-
-## 5.5 Violin Plots
-
-Violin plots combine box-plot summaries with kernel density estimates, providing a richer view of the distribution shape for each channel across eye states.
-
-![Violin Plots](analysis-plots\violinplots_cleaned.png)
+![Histograms After Cleaning](analysis-plots\histograms_cleaned.png)
 
 
 # 6. Log-Normalization
 
-Logarithmic normalization compresses the dynamic range of EEG amplitudes, reducing the impact of extreme values and making distributions more symmetric. We apply `log10(x - min + 1)` to each channel to ensure all values are positive before transformation.
+Logarithmic normalization compresses the dynamic range of EEG amplitudes, reducing the impact of extreme values and making distributions more symmetric. We apply `log10(x - min + 1)` to each channel.
 
 ![Log-Normalization Effect](analysis-plots\log_normalization_comparison.png)
 
 | Channel | Orig Mean | Orig Std | Norm Mean | Norm Std |
 | --- | --- | --- | --- | --- |
-| AF3 | 4293.35 | 18.97 | 1.7538 | 0.1548 |
-| F7 | 4003.52 | 21.30 | 1.7536 | 0.1789 |
-| F3 | 4260.09 | 12.54 | 1.5890 | 0.1590 |
-| FC5 | 4117.68 | 13.79 | 1.6337 | 0.1500 |
-| T7 | 4338.55 | 9.84 | 1.4635 | 0.1580 |
-| P7 | 4618.28 | 9.94 | 1.4376 | 0.1897 |
-| O1 | 4069.58 | 16.94 | 1.6118 | 0.1870 |
-| O2 | 4613.93 | 12.21 | 1.5661 | 0.1587 |
-| P8 | 4199.73 | 12.00 | 1.5422 | 0.1681 |
-| T8 | 4229.20 | 12.48 | 1.5487 | 0.1785 |
-| FC6 | 4199.27 | 14.12 | 1.5821 | 0.1930 |
-| F4 | 4275.49 | 11.84 | 1.5549 | 0.1595 |
-| F8 | 4601.37 | 16.96 | 1.6807 | 0.1907 |
-| AF4 | 4354.39 | 19.06 | 1.7468 | 0.1725 |
+| AF3 | 4291.08 | 14.98 | 1.5938 | 0.1840 |
+| F7 | 4001.07 | 17.93 | 1.6432 | 0.2100 |
+| F3 | 4259.13 | 11.08 | 1.4765 | 0.1957 |
+| FC5 | 4116.31 | 12.21 | 1.4992 | 0.1928 |
+| T7 | 4337.72 | 8.99 | 1.3916 | 0.1735 |
+| P7 | 4617.74 | 9.00 | 1.3102 | 0.2350 |
+| O1 | 4067.93 | 15.92 | 1.5967 | 0.1839 |
+| O2 | 4613.88 | 11.50 | 1.4747 | 0.1908 |
+| P8 | 4199.35 | 11.13 | 1.4657 | 0.1901 |
+| T8 | 4229.07 | 11.28 | 1.4555 | 0.2005 |
+| FC6 | 4199.03 | 12.16 | 1.4824 | 0.2158 |
+| F4 | 4274.63 | 10.52 | 1.4518 | 0.1842 |
+| F8 | 4600.62 | 14.20 | 1.5456 | 0.2126 |
+| AF4 | 4352.87 | 15.73 | 1.6107 | 0.1879 |
 
 
-# 7. Data Visualization (After Normalization)
+# 7. Feature Engineering
 
-Visualizations help identify data distributions, correlations, and potential anomalies in the EEG signals.
-
-
-## 7.1 Class Balance
-
-The class-balance diagram shows the distribution of samples across eye states — essential for identifying potential class imbalance that may bias downstream classifiers.
-
-![Class Balance](analysis-plots\class_balance_normalized.png)
+Feature engineering derives new variables from raw EEG channels to capture domain-specific patterns that may improve classification performance.
 
 
-## 7.2 Correlation Heatmap
+## 7.1 Hemispheric Asymmetry
 
-The correlation heatmap reveals linear relationships between EEG channels. Highly correlated channels may carry redundant information, motivating dimensionality reduction (e.g., PCA).
+The asymmetry index $(Left - Right)$ for paired electrodes captures lateralisation differences linked to cognitive and emotional states. Research shows that hemispheric imbalance correlates with attentional shifts associated with eye opening and closing.
 
-![Correlation Heatmap](analysis-plots\correlation_heatmap_normalized.png)
-
-
-## 7.3 Box Plots
-
-Box plots summarize the distribution of each channel and highlight potential outliers as points beyond the whiskers (1.5x IQR rule).
-
-![Box Plots](analysis-plots\boxplots_normalized.png)
-
-
-## 7.4 Histograms
-
-Histograms show the amplitude distribution for each EEG channel split by eye state. Deviations from normality or bimodal patterns indicate differences between open- and closed-eye signals.
-
-![Histograms](analysis-plots\histograms_normalized.png)
+| Feature | Left | Right | Mean | Std |
+| --- | --- | --- | --- | --- |
+| AF3_AF4_asym | AF3 | AF4 | -61.7892 | 9.2975 |
+| F7_F8_asym | F7 | F8 | -599.5502 | 20.7529 |
+| F3_F4_asym | F3 | F4 | -15.4972 | 9.3525 |
+| FC5_FC6_asym | FC5 | FC6 | -82.7151 | 15.6083 |
+| T7_T8_asym | T7 | T8 | 108.6488 | 12.0318 |
+| P7_P8_asym | P7 | P8 | 418.3872 | 11.0518 |
+| O1_O2_asym | O1 | O2 | -545.9479 | 16.1104 |
 
 
-## 7.5 Violin Plots
+## 7.2 Global Channel Statistics
 
-Violin plots combine box-plot summaries with kernel density estimates, providing a richer view of the distribution shape for each channel across eye states.
+Per-sample summary statistics across all 14 channels capture overall brain activity levels at each time point.
 
-![Violin Plots](analysis-plots\violinplots_normalized.png)
+| Feature | Description | Mean | Std |
+| --- | --- | --- | --- |
+| ch_mean | Mean across 14 channels | 4297.17 | 7.72 |
+| ch_std | Std across 14 channels | 196.1182 | 3.2813 |
+
+
+## 7.3 Feature Summary
+
+Total features for classification: **23** (14 original + 9 engineered).
+
+| # | Feature | Type |
+| --- | --- | --- |
+| 1 | AF3 | Original EEG |
+| 2 | F7 | Original EEG |
+| 3 | F3 | Original EEG |
+| 4 | FC5 | Original EEG |
+| 5 | T7 | Original EEG |
+| 6 | P7 | Original EEG |
+| 7 | O1 | Original EEG |
+| 8 | O2 | Original EEG |
+| 9 | P8 | Original EEG |
+| 10 | T8 | Original EEG |
+| 11 | FC6 | Original EEG |
+| 12 | F4 | Original EEG |
+| 13 | F8 | Original EEG |
+| 14 | AF4 | Original EEG |
+| 15 | AF3_AF4_asym | Engineered |
+| 16 | F7_F8_asym | Engineered |
+| 17 | F3_F4_asym | Engineered |
+| 18 | FC5_FC6_asym | Engineered |
+| 19 | T7_T8_asym | Engineered |
+| 20 | P7_P8_asym | Engineered |
+| 21 | O1_O2_asym | Engineered |
+| 22 | ch_mean | Engineered |
+| 23 | ch_std | Engineered |
 
 
 # 8. FFT, Spectrogram and PSD Analysis
 
-Frequency-domain analysis transforms EEG signals from the time domain to the frequency domain, revealing the power distribution across brain wave bands: **Delta** (0.5-4 Hz), **Theta** (4-8 Hz), **Alpha** (8-12 Hz), **Beta** (12-30 Hz), and **Gamma** (30-64 Hz). This is critical for EEG eye-state classification since alpha power characteristically increases when eyes are closed (the **Berger effect**).
+Frequency-domain analysis reveals the power distribution across brain wave bands: **Delta** (0.5-4 Hz), **Theta** (4-8 Hz), **Alpha** (8-12 Hz), **Beta** (12-30 Hz), and **Gamma** (30-64 Hz). Alpha power increases when eyes are closed (the **Berger effect**).
 
 
 ## 8.1 FFT Frequency Spectrum
 
-The Fast Fourier Transform decomposes EEG signals into constituent frequencies. The frequency spectrum shows the power at each frequency, highlighting dominant brain-wave activity.
+The FFT decomposes each EEG channel into constituent frequencies.
 
 ![FFT Frequency Spectrum](analysis-plots\fft_frequency_spectrum.png)
 
 
 ## 8.2 Power Spectral Density (PSD)
 
-Welch's method estimates the PSD with reduced variance compared to raw periodograms. Comparing PSD between eyes-open and eyes-closed states reveals characteristic changes — notably increased alpha power (8-12 Hz) during eye closure.
+Welch's method estimates the PSD for each channel. Shaded regions and labels indicate standard EEG frequency bands.
 
 ![PSD Analysis](analysis-plots\psd_analysis.png)
 
 
 ## 8.3 Spectrogram Analysis
 
-Spectrograms provide a time-frequency representation of EEG signals, showing how the power at different frequencies evolves over time. This is particularly useful for identifying transient events and state transitions — and serves as the input representation for the CNN-based deep-learning model in Section 11.
+Spectrograms show the time-frequency power distribution. Horizontal dashed lines mark band boundaries (4, 8, 12, 30 Hz).
 
-![Spectrogram AF3](analysis-plots\spectrogram_AF3.png)
+![Spectrograms Eyes Open](analysis-plots\spectrograms_open.png)
 
-![Spectrogram O1](analysis-plots\spectrogram_O1.png)
-
-![Spectrogram T7](analysis-plots\spectrogram_T7.png)
+![Spectrograms Eyes Closed](analysis-plots\spectrograms_closed.png)
 
 
-# 9. PCA and LDA Analysis
+# 9. Dimensionality Reduction
 
-Dimensionality-reduction techniques project high-dimensional EEG data into lower-dimensional spaces while preserving meaningful structure. **PCA** (unsupervised) maximises variance; **LDA** (supervised) maximises class separability — both are fundamental tools for understanding the data geometry before classification.
+Projecting high-dimensional EEG data into lower-dimensional spaces reveals clustering structure. **PCA** maximises variance; **LDA** maximises class separability; **t-SNE** and **UMAP** capture non-linear manifold structure.
 
 
 ## 9.1 PCA
 
-Principal Component Analysis identifies orthogonal directions of maximum variance. Applied to the 14 EEG channels, PCA reveals how much of the total signal variance can be captured in fewer dimensions.
+PCA identifies orthogonal directions of maximum variance.
 
 ![PCA Variance](analysis-plots\pca_variance.png)
 
-| Component | Variance Explained (%) | Cumulative (%) |
+| Component | Variance (%) | Cumulative (%) |
 | --- | --- | --- |
-| PC1 | 43.03 | 43.03 |
-| PC2 | 14.67 | 57.70 |
-| PC3 | 12.09 | 69.79 |
-| PC4 | 5.63 | 75.42 |
-| PC5 | 5.48 | 80.89 |
-| PC6 | 3.75 | 84.65 |
-| PC7 | 3.14 | 87.79 |
-| PC8 | 2.59 | 90.38 |
-| PC9 | 2.31 | 92.69 |
-| PC10 | 2.24 | 94.93 |
-| PC11 | 1.82 | 96.74 |
-| PC12 | 1.30 | 98.05 |
-| PC13 | 1.25 | 99.29 |
-| PC14 | 0.71 | 100.00 |
+| PC1 | 29.78 | 29.78 |
+| PC2 | 20.11 | 49.89 |
+| PC3 | 9.40 | 59.28 |
+| PC4 | 7.66 | 66.94 |
+| PC5 | 7.11 | 74.05 |
+| PC6 | 4.75 | 78.80 |
+| PC7 | 4.06 | 82.87 |
+| PC8 | 3.84 | 86.71 |
+| PC9 | 3.79 | 90.50 |
+| PC10 | 2.75 | 93.25 |
+| PC11 | 2.51 | 95.76 |
+| PC12 | 1.81 | 97.57 |
+| PC13 | 1.36 | 98.93 |
+| PC14 | 1.07 | 99.99 |
+| PC15 | 0.01 | 100.00 |
+| PC16 | 0.00 | 100.00 |
+| PC17 | 0.00 | 100.00 |
+| PC18 | 0.00 | 100.00 |
+| PC19 | 0.00 | 100.00 |
+| PC20 | 0.00 | 100.00 |
+| PC21 | 0.00 | 100.00 |
+| PC22 | 0.00 | 100.00 |
+| PC23 | 0.00 | 100.00 |
 
-**11 components** are required to capture >= 95% of total variance.
+**11 components** capture >= 95% of variance.
 
 ![PCA 2D Projection](analysis-plots\pca_2d_projection.png)
 
 
 ## 9.2 LDA
 
-Linear Discriminant Analysis finds the projection that maximises the ratio of between-class to within-class variance. For binary eye-state classification, LDA yields a single discriminant dimension that optimally separates the two classes.
+LDA maximises the ratio of between-class to within-class variance, yielding a single discriminant for binary classification.
 
 ![LDA 1D Projection](analysis-plots\lda_1d_projection.png)
 
 
-## 9.3 Clustering Evaluation
+## 9.3 t-SNE
 
-Clustering metrics quantify how well the reduced representations separate eye states, independent of the downstream classifier.
+t-Distributed Stochastic Neighbor Embedding is a non-linear technique that preserves local neighbourhood structure. A subsample of 5000 points is used for computational efficiency.
 
-| Method | Silhouette Score (higher better) | Davies-Bouldin Index (lower better) | Calinski-Harabasz Score (higher better) |
+![t-SNE 2D Projection](analysis-plots\tsne_2d_projection.png)
+
+
+## 9.4 UMAP
+
+UMAP preserves both local and global structure, often producing cleaner clusters than t-SNE with faster computation.
+
+![UMAP 2D Projection](analysis-plots\umap_2d_projection.png)
+
+
+## 9.5 Clustering Evaluation
+
+Clustering metrics quantify separation quality in reduced spaces.
+
+| Method | Silhouette (higher better) | Davies-Bouldin (lower better) | Calinski-Harabasz (higher better) |
 | --- | --- | --- | --- |
-| PCA (2D) | 0.0112 | 12.0940 | 61.70 |
-| LDA (1D) | 0.1302 | 1.8011 | 2135.05 |
+| PCA (2D) | 0.0035 | 23.0642 | 14.39 |
+| LDA (1D) | 0.1561 | 1.6419 | 2148.12 |
+| t-SNE (2D) | 0.0183 | 10.0752 | 42.44 |
+| UMAP (2D) | 0.0297 | 16.6995 | 14.01 |
 
 
 # 10. Machine Learning Classification
 
-This section evaluates five classical machine-learning algorithms on the standardised EEG features using a 70/30 stratified train-test split. Each model is assessed on accuracy, precision, recall, F1-score, and AUC-ROC.
+Five classical ML algorithms are evaluated using a 70/30 stratified train-test split. `StandardScaler` is fit **exclusively on training data** to prevent data leakage.
 
 
-## 10.1 Logistic Regression
+## 10.1 Train/Test Split & Class Balance
 
-Logistic Regression models the probability of eye state as a logistic function of the EEG features. It serves as a simple, interpretable baseline for binary classification.
+Stratified split: 70% train / 30% test, preserving class proportions.
 
-| Metric | Value |
-| --- | --- |
-| Accuracy | 0.6904 |
-| Precision | 0.6842 |
-| Recall | 0.5942 |
-| F1-Score | 0.6360 |
-| AUC-ROC | 0.7441 |
-| Training Time | 0.032s |
+| Split | Open (0) | Closed (1) | Total | Closed % |
+| --- | --- | --- | --- | --- |
+| Train | 3751 | 3035 | 6786 | 44.7% |
+| Test | 1608 | 1301 | 2909 | 44.7% |
 
 
-## 10.2 K-Nearest Neighbors
+## 10.2 Cross-Validation Results (5-Fold Stratified)
 
-KNN classifies each sample by majority vote among its k nearest neighbours in feature space. It makes no assumptions about the data distribution.
+5-fold stratified cross-validation on the training set.
 
-| Metric | Value |
-| --- | --- |
-| Accuracy | 0.9603 |
-| Precision | 0.9619 |
-| Recall | 0.9506 |
-| F1-Score | 0.9562 |
-| AUC-ROC | 0.9919 |
-| Training Time | 0.033s |
-
-
-## 10.3 Support Vector Machine
-
-SVM finds the optimal hyperplane that maximises the margin between classes. With an RBF kernel, it can capture non-linear decision boundaries.
-
-| Metric | Value |
-| --- | --- |
-| Accuracy | 0.9339 |
-| Precision | 0.9396 |
-| Recall | 0.9135 |
-| F1-Score | 0.9264 |
-| AUC-ROC | 0.9809 |
-| Training Time | 14.509s |
+| Model | CV F1 Mean | CV F1 Std |
+| --- | --- | --- |
+| Logistic Regression | 0.6313 | 0.0141 |
+| K-Nearest Neighbors | 0.9353 | 0.0053 |
+| Support Vector Machine | 0.9148 | 0.0069 |
+| Random Forest | 0.8932 | 0.0065 |
+| Gradient Boosting | 0.8551 | 0.0071 |
 
 
-## 10.4 Random Forest
+## 10.3 Logistic Regression
 
-Random Forest builds an ensemble of decision trees trained on bootstrapped subsets, reducing overfitting through bagging and random feature selection.
+Logistic Regression models the posterior probability using the sigmoid function:
+
+$$P(y=1 \mid \mathbf{x}) = \sigma(\mathbf{w}^T \mathbf{x} + b) = \frac{1}{1 + e^{-(\mathbf{w}^T \mathbf{x} + b)}}$$
+
+The model minimises binary cross-entropy loss with L2 regularisation:
+
+$$\mathcal{L} = -\frac{1}{N}\sum_{i=1}^{N}[y_i \log(\hat{y}_i) + (1-y_i)\log(1-\hat{y}_i)] + \frac{\lambda}{2}\|\mathbf{w}\|^2$$
+
+It serves as an interpretable linear baseline for binary classification.
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.9272 |
-| Precision | 0.9309 |
-| Recall | 0.9074 |
-| F1-Score | 0.9190 |
-| AUC-ROC | 0.9812 |
-| Training Time | 0.973s |
+| Accuracy | 0.6978 |
+| Precision | 0.6939 |
+| Recall | 0.5803 |
+| F1-Score | 0.6321 |
+| AUC-ROC | 0.7510 |
+| Training Time | 0.030s |
 
 
-## 10.5 Gradient Boosting
+## 10.4 K-Nearest Neighbors
 
-Gradient Boosting sequentially builds weak learners (trees), each correcting errors of the previous ensemble. It often achieves top accuracy on structured/tabular data.
+KNN classifies each sample by majority vote among its $k$ nearest neighbours using the Euclidean distance metric:
+
+$$d(\mathbf{x}_i, \mathbf{x}_j) = \sqrt{\sum_{m=1}^{M}(x_{im} - x_{jm})^2}$$
+
+The predicted class is:
+
+$$\hat{y} = \arg\max_c \sum_{i \in N_k(\mathbf{x})} \mathbb{1}(y_i = c)$$
+
+KNN is non-parametric, making no distributional assumptions. With $k=5$ and standardised features, it captures local EEG decision boundaries.
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.8493 |
-| Precision | 0.8478 |
-| Recall | 0.8153 |
-| F1-Score | 0.8312 |
-| AUC-ROC | 0.9338 |
-| Training Time | 6.376s |
+| Accuracy | 0.9529 |
+| Precision | 0.9491 |
+| Recall | 0.9454 |
+| F1-Score | 0.9472 |
+| AUC-ROC | 0.9868 |
+| Training Time | 0.000s |
 
 
-## 10.6 ML Model Comparison
+## 10.5 Support Vector Machine
 
-Summary comparison of all classical ML models.
+SVM finds the hyperplane that maximises the margin between classes. The RBF kernel maps features into higher-dimensional space:
 
-| Model | Accuracy | Precision | Recall | F1-Score | AUC-ROC | Train Time (s) |
+$$K(\mathbf{x}_i, \mathbf{x}_j) = \exp(-\gamma \|\mathbf{x}_i - \mathbf{x}_j\|^2)$$
+
+The optimisation objective with soft margin is:
+
+$$\min_{\mathbf{w}, b} \frac{1}{2}\|\mathbf{w}\|^2 + C \sum_{i=1}^{N} \max(0, 1 - y_i(\mathbf{w}^T\phi(\mathbf{x}_i) + b))$$
+
+The RBF kernel captures non-linear decision boundaries between eye states.
+
+| Metric | Value |
+| --- | --- |
+| Accuracy | 0.9295 |
+| Precision | 0.9322 |
+| Recall | 0.9085 |
+| F1-Score | 0.9202 |
+| AUC-ROC | 0.9790 |
+| Training Time | 10.131s |
+
+
+## 10.6 Random Forest
+
+Random Forest builds an ensemble of $B$ decision trees, each trained on a bootstrapped subset with random feature selection:
+
+$$\hat{y} = \text{mode}\{h_b(\mathbf{x})\}_{b=1}^{B}$$
+
+Each tree splits nodes using the Gini impurity criterion:
+
+$$G = 1 - \sum_{c=1}^{C} p_c^2$$
+
+Bagging reduces variance and random subspace selection decorrelates trees. 200 estimators are used.
+
+| Metric | Value |
+| --- | --- |
+| Accuracy | 0.9230 |
+| Precision | 0.9339 |
+| Recall | 0.8909 |
+| F1-Score | 0.9119 |
+| AUC-ROC | 0.9768 |
+| Training Time | 0.923s |
+
+
+## 10.7 Gradient Boosting
+
+Gradient Boosting builds an additive ensemble where each tree corrects residual errors of the previous ensemble:
+
+$$F_m(\mathbf{x}) = F_{m-1}(\mathbf{x}) + \eta \cdot h_m(\mathbf{x})$$
+
+Each tree $h_m$ is fit to the negative gradient of the loss function. The learning rate $\eta$ controls the contribution of each tree. 200 boosting rounds are used with default depth and $\eta = 0.1$.
+
+| Metric | Value |
+| --- | --- |
+| Accuracy | 0.8707 |
+| Precision | 0.8745 |
+| Recall | 0.8301 |
+| F1-Score | 0.8517 |
+| AUC-ROC | 0.9458 |
+| Training Time | 9.682s |
+
+
+## 10.8 Feature Importance
+
+Feature importance from Random Forest and Gradient Boosting.
+
+![Feature Importance](analysis-plots\feature_importance.png)
+
+
+## 10.9 ROC Curves
+
+ROC curves plot True Positive Rate vs False Positive Rate.
+
+![ML ROC Curves](analysis-plots\ml_roc_curves.png)
+
+
+## 10.10 ML Model Comparison
+
+| Model | Accuracy | Precision | Recall | F1-Score | AUC-ROC | Time (s) |
 | --- | --- | --- | --- | --- | --- | --- |
-| Logistic Regression | 0.6904 | 0.6842 | 0.5942 | 0.6360 | 0.7441 | 0.032 |
-| K-Nearest Neighbors | 0.9603 | 0.9619 | 0.9506 | 0.9562 | 0.9919 | 0.033 |
-| Support Vector Machine | 0.9339 | 0.9396 | 0.9135 | 0.9264 | 0.9809 | 14.509 |
-| Random Forest | 0.9272 | 0.9309 | 0.9074 | 0.9190 | 0.9812 | 0.973 |
-| Gradient Boosting | 0.8493 | 0.8478 | 0.8153 | 0.8312 | 0.9338 | 6.376 |
+| Logistic Regression | 0.6978 | 0.6939 | 0.5803 | 0.6321 | 0.7510 | 0.030 |
+| K-Nearest Neighbors | 0.9529 | 0.9491 | 0.9454 | 0.9472 | 0.9868 | 0.000 |
+| Support Vector Machine | 0.9295 | 0.9322 | 0.9085 | 0.9202 | 0.9790 | 10.131 |
+| Random Forest | 0.9230 | 0.9339 | 0.8909 | 0.9119 | 0.9768 | 0.923 |
+| Gradient Boosting | 0.8707 | 0.8745 | 0.8301 | 0.8517 | 0.9458 | 9.682 |
 
 ![ML Confusion Matrices](analysis-plots\ml_confusion_matrices.png)
 
@@ -462,57 +618,74 @@ Summary comparison of all classical ML models.
 
 # 11. Neural Network Classification
 
-Deep-learning models learn hierarchical feature representations from raw EEG signals. This section evaluates three architectures: a **1D CNN** on raw multi-channel EEG windows, a **2D CNN on spectrograms**, and an **LSTM** (recurrent) network — all trained to predict eye state from temporal EEG patterns.
+Deep-learning models learn hierarchical feature representations from raw EEG signals. This section evaluates a **1D CNN**, a **2D CNN on spectrograms**, and an **LSTM** network.
 
-Window size = 64 samples, step = 16. Total windows: 737 (train 515, test 222).
+Window size = 64 samples, step = 16. Total windows: 602 (train 421, test 181).
 
 
 ## 11.1 1D CNN on Raw EEG
 
-A 1D Convolutional Neural Network processes windows of multi-channel EEG data (64 samples x 14 channels), learning local temporal patterns through convolutional filters before classifying eye state.
+A 1D Convolutional Neural Network applies learnable filters across the temporal dimension of multi-channel EEG windows (64 samples x 14 channels). The convolution for filter $f$ at position $t$ is:
+
+$$y_t^{(f)} = \text{ReLU}\left(\sum_{k=0}^{K-1} \sum_{c=1}^{C} w_{k,c}^{(f)} \cdot x_{t+k,c} + b^{(f)}\right)$$
+
+where $K$ is the kernel size and $C$ the number of channels. Max-pooling reduces dimensionality and global average pooling aggregates features.
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.9505 |
-| Precision | 0.9684 |
-| Recall | 0.9200 |
-| F1-Score | 0.9436 |
-| AUC-ROC | 0.9904 |
-| Training Time | 11.145s |
+| Accuracy | 0.9669 |
+| Precision | 0.9615 |
+| Recall | 0.9615 |
+| F1-Score | 0.9615 |
+| AUC-ROC | 0.9964 |
+| Training Time | 12.913s |
 
 ![1D CNN Training History](analysis-plots\cnn1d_training.png)
 
 
 ## 11.2 CNN on Spectrograms
 
-A 2D CNN processes spectrogram representations of EEG windows — treating the time-frequency image with channel depth as input. This leverages the CNN's ability to detect spatial patterns in frequency-time maps, similar to image classification.
+A 2D CNN processes spectrogram representations of EEG windows as multi-channel images (frequency x time x EEG channels). The 2D convolution learns frequency-time patterns:
 
-Spectrogram window = 128 samples, step = 64. Shape per sample: (17, 13, 14) (freq x time x channels). Total: 184.
+$$Y_{i,j}^{(f)} = \text{ReLU}\left(\sum_{m,n,c} W_{m,n,c}^{(f)} \cdot X_{i+m,j+n,c} + b^{(f)}\right)$$
+
+**Improvements:** Smaller windows with more overlap generate more training samples. Class weights address label imbalance. A reduced learning rate and increased patience improve convergence.
+
+Spectrogram window = 64, step = 8. Shape per sample: (17, 5, 14) (freq x time x channels). Total samples: 1204.
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.4464 |
-| Precision | 0.4464 |
-| Recall | 1.0000 |
-| F1-Score | 0.6173 |
-| AUC-ROC | 0.6865 |
-| Training Time | 4.666s |
+| Accuracy | 0.9088 |
+| Precision | 0.9310 |
+| Recall | 0.8544 |
+| F1-Score | 0.8911 |
+| AUC-ROC | 0.9715 |
+| Training Time | 23.779s |
 
 ![CNN Spectrogram Training History](analysis-plots\cnn2d_spectrogram_training.png)
 
 
 ## 11.3 LSTM / RNN
 
-Long Short-Term Memory networks capture long-range temporal dependencies in sequential EEG data. Unlike CNNs that focus on local patterns, LSTMs maintain a memory cell that can selectively retain or discard information across the 64-sample window — making them well-suited for modelling brain-state transitions.
+Long Short-Term Memory networks capture temporal dependencies through gating mechanisms:
+
+$$\mathbf{f}_t = \sigma(\mathbf{W}_f [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_f) \quad \text{(forget gate)}$$
+$$\mathbf{i}_t = \sigma(\mathbf{W}_i [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_i) \quad \text{(input gate)}$$
+$$\tilde{\mathbf{c}}_t = \tanh(\mathbf{W}_c [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_c) \quad \text{(candidate)}$$
+$$\mathbf{c}_t = \mathbf{f}_t \odot \mathbf{c}_{t-1} + \mathbf{i}_t \odot \tilde{\mathbf{c}}_t \quad \text{(cell state)}$$
+$$\mathbf{o}_t = \sigma(\mathbf{W}_o [\mathbf{h}_{t-1}, \mathbf{x}_t] + \mathbf{b}_o) \quad \text{(output gate)}$$
+$$\mathbf{h}_t = \mathbf{o}_t \odot \tanh(\mathbf{c}_t) \quad \text{(hidden state)}$$
+
+The forget gate controls what to discard, the input gate what to store, and the output gate what to expose as the hidden state.
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.9144 |
-| Precision | 0.8857 |
-| Recall | 0.9300 |
-| F1-Score | 0.9073 |
-| AUC-ROC | 0.9742 |
-| Training Time | 15.954s |
+| Accuracy | 0.9558 |
+| Precision | 0.9487 |
+| Recall | 0.9487 |
+| F1-Score | 0.9487 |
+| AUC-ROC | 0.9829 |
+| Training Time | 16.321s |
 
 ![LSTM Training History](analysis-plots\lstm_training.png)
 
@@ -523,9 +696,9 @@ Side-by-side comparison of all neural-network architectures.
 
 | Model | Accuracy | Precision | Recall | F1-Score | AUC-ROC | Train Time (s) |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1D CNN | 0.9505 | 0.9684 | 0.9200 | 0.9436 | 0.9904 | 11.145 |
-| CNN (Spectrogram) | 0.4464 | 0.4464 | 1.0000 | 0.6173 | 0.6865 | 4.666 |
-| LSTM | 0.9144 | 0.8857 | 0.9300 | 0.9073 | 0.9742 | 15.954 |
+| 1D CNN | 0.9669 | 0.9615 | 0.9615 | 0.9615 | 0.9964 | 12.913 |
+| CNN (Spectrogram) | 0.9088 | 0.9310 | 0.8544 | 0.8911 | 0.9715 | 23.779 |
+| LSTM | 0.9558 | 0.9487 | 0.9487 | 0.9487 | 0.9829 | 16.321 |
 
 ![Neural Network Comparison](analysis-plots\nn_comparison_chart.png)
 
@@ -534,48 +707,42 @@ Side-by-side comparison of all neural-network architectures.
 
 # 12. Final Comparison and Inference
 
-This section unifies all models — classical ML and deep learning — ranked by F1-Score, and provides a recommendation for the best model.
+This section unifies all models — classical ML and deep learning — ranked by F1-Score.
 
 
 ## 12.1 Unified Comparison Table
 
 | Rank | Model | Accuracy | Precision | Recall | F1-Score | AUC-ROC |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | K-Nearest Neighbors | 0.9603 | 0.9619 | 0.9506 | 0.9562 | 0.9919 |
-| 2 | 1D CNN | 0.9505 | 0.9684 | 0.9200 | 0.9436 | 0.9904 |
-| 3 | Support Vector Machine | 0.9339 | 0.9396 | 0.9135 | 0.9264 | 0.9809 |
-| 4 | Random Forest | 0.9272 | 0.9309 | 0.9074 | 0.9190 | 0.9812 |
-| 5 | LSTM | 0.9144 | 0.8857 | 0.9300 | 0.9073 | 0.9742 |
-| 6 | Gradient Boosting | 0.8493 | 0.8478 | 0.8153 | 0.8312 | 0.9338 |
-| 7 | Logistic Regression | 0.6904 | 0.6842 | 0.5942 | 0.6360 | 0.7441 |
-| 8 | CNN (Spectrogram) | 0.4464 | 0.4464 | 1.0000 | 0.6173 | 0.6865 |
+| 1 | 1D CNN | 0.9669 | 0.9615 | 0.9615 | 0.9615 | 0.9964 |
+| 2 | LSTM | 0.9558 | 0.9487 | 0.9487 | 0.9487 | 0.9829 |
+| 3 | K-Nearest Neighbors | 0.9529 | 0.9491 | 0.9454 | 0.9472 | 0.9868 |
+| 4 | Support Vector Machine | 0.9295 | 0.9322 | 0.9085 | 0.9202 | 0.9790 |
+| 5 | Random Forest | 0.9230 | 0.9339 | 0.8909 | 0.9119 | 0.9768 |
+| 6 | CNN (Spectrogram) | 0.9088 | 0.9310 | 0.8544 | 0.8911 | 0.9715 |
+| 7 | Gradient Boosting | 0.8707 | 0.8745 | 0.8301 | 0.8517 | 0.9458 |
+| 8 | Logistic Regression | 0.6978 | 0.6939 | 0.5803 | 0.6321 | 0.7510 |
 
 ![Final Model Comparison](analysis-plots\final_comparison.png)
 
 
 ## 12.2 Inference and Recommendation
 
-### Best Overall Model: **K-Nearest Neighbors**
+### Best Overall Model: **1D CNN**
 
-Based on the comprehensive evaluation, **K-Nearest Neighbors** achieves the highest F1-Score of **0.9562** with an accuracy of **0.9603** and AUC-ROC of **0.9919**.
+Based on comprehensive evaluation, **1D CNN** achieves the highest F1-Score of **0.9615** with accuracy **0.9669** and AUC-ROC **0.9964**.
 
-The runner-up is **1D CNN** with an F1-Score of **0.9436**.
+Runner-up: **LSTM** (F1 = 0.9487).
 
 **Key Observations:**
 
+- Deep learning (**1D CNN**) outperforms the best classical ML model (**K-Nearest Neighbors**) by **1.43** percentage points in F1-Score.
 
+- **For production deployment**, **1D CNN** is recommended.
 
-- The classical ML model (**K-Nearest Neighbors**) matches or outperforms deep learning (**1D CNN**) by **1.26** percentage points in F1-Score.
-
-- For this dataset size, ensemble tree methods capture the relevant patterns without requiring the architectural complexity of deep learning.
-
-- **For production deployment**, **K-Nearest Neighbors** is recommended when maximum classification performance is required.
-
-- **For real-time / low-latency applications**, **Logistic Regression** offers the fastest training (0.032s) with an F1-Score of 0.6360.
+- **For low-latency applications**, **K-Nearest Neighbors** offers the fastest training (0.000s) with F1 = 0.9472.
 
 
 
 ---
-
-*Report generated automatically by the EEG Eye State Classification Pipeline.*
 
