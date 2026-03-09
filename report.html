@@ -1,0 +1,1275 @@
+<!DOCTYPE html><html><head>
+      <title>report</title>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      
+      <link rel="stylesheet" href="file:///c:\Users\r\.vscode\extensions\shd101wyy.markdown-preview-enhanced-0.8.20\crossnote\dependencies\katex\katex.min.css">
+      
+      
+      
+      
+      
+      <style>
+      code[class*=language-],pre[class*=language-]{color:#333;background:0 0;font-family:Consolas,"Liberation Mono",Menlo,Courier,monospace;text-align:left;white-space:pre;word-spacing:normal;word-break:normal;word-wrap:normal;line-height:1.4;-moz-tab-size:8;-o-tab-size:8;tab-size:8;-webkit-hyphens:none;-moz-hyphens:none;-ms-hyphens:none;hyphens:none}pre[class*=language-]{padding:.8em;overflow:auto;border-radius:3px;background:#f5f5f5}:not(pre)>code[class*=language-]{padding:.1em;border-radius:.3em;white-space:normal;background:#f5f5f5}.token.blockquote,.token.comment{color:#969896}.token.cdata{color:#183691}.token.doctype,.token.macro.property,.token.punctuation,.token.variable{color:#333}.token.builtin,.token.important,.token.keyword,.token.operator,.token.rule{color:#a71d5d}.token.attr-value,.token.regex,.token.string,.token.url{color:#183691}.token.atrule,.token.boolean,.token.code,.token.command,.token.constant,.token.entity,.token.number,.token.property,.token.symbol{color:#0086b3}.token.prolog,.token.selector,.token.tag{color:#63a35c}.token.attr-name,.token.class,.token.class-name,.token.function,.token.id,.token.namespace,.token.pseudo-class,.token.pseudo-element,.token.url-reference .token.variable{color:#795da3}.token.entity{cursor:help}.token.title,.token.title .token.punctuation{font-weight:700;color:#1d3e81}.token.list{color:#ed6a43}.token.inserted{background-color:#eaffea;color:#55a532}.token.deleted{background-color:#ffecec;color:#bd2c00}.token.bold{font-weight:700}.token.italic{font-style:italic}.language-json .token.property{color:#183691}.language-markup .token.tag .token.punctuation{color:#333}.language-css .token.function,code.language-css{color:#0086b3}.language-yaml .token.atrule{color:#63a35c}code.language-yaml{color:#183691}.language-ruby .token.function{color:#333}.language-markdown .token.url{color:#795da3}.language-makefile .token.symbol{color:#795da3}.language-makefile .token.variable{color:#183691}.language-makefile .token.builtin{color:#0086b3}.language-bash .token.keyword{color:#0086b3}pre[data-line]{position:relative;padding:1em 0 1em 3em}pre[data-line] .line-highlight-wrapper{position:absolute;top:0;left:0;background-color:transparent;display:block;width:100%}pre[data-line] .line-highlight{position:absolute;left:0;right:0;padding:inherit 0;margin-top:1em;background:hsla(24,20%,50%,.08);background:linear-gradient(to right,hsla(24,20%,50%,.1) 70%,hsla(24,20%,50%,0));pointer-events:none;line-height:inherit;white-space:pre}pre[data-line] .line-highlight:before,pre[data-line] .line-highlight[data-end]:after{content:attr(data-start);position:absolute;top:.4em;left:.6em;min-width:1em;padding:0 .5em;background-color:hsla(24,20%,50%,.4);color:#f4f1ef;font:bold 65%/1.5 sans-serif;text-align:center;vertical-align:.3em;border-radius:999px;text-shadow:none;box-shadow:0 1px #fff}pre[data-line] .line-highlight[data-end]:after{content:attr(data-end);top:auto;bottom:.4em}html body{font-family:'Helvetica Neue',Helvetica,'Segoe UI',Arial,freesans,sans-serif;font-size:16px;line-height:1.6;color:#333;background-color:#fff;overflow:initial;box-sizing:border-box;word-wrap:break-word}html body>:first-child{margin-top:0}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{line-height:1.2;margin-top:1em;margin-bottom:16px;color:#000}html body h1{font-size:2.25em;font-weight:300;padding-bottom:.3em}html body h2{font-size:1.75em;font-weight:400;padding-bottom:.3em}html body h3{font-size:1.5em;font-weight:500}html body h4{font-size:1.25em;font-weight:600}html body h5{font-size:1.1em;font-weight:600}html body h6{font-size:1em;font-weight:600}html body h1,html body h2,html body h3,html body h4,html body h5{font-weight:600}html body h5{font-size:1em}html body h6{color:#5c5c5c}html body strong{color:#000}html body del{color:#5c5c5c}html body a:not([href]){color:inherit;text-decoration:none}html body a{color:#08c;text-decoration:none}html body a:hover{color:#00a3f5;text-decoration:none}html body img{max-width:100%}html body>p{margin-top:0;margin-bottom:16px;word-wrap:break-word}html body>ol,html body>ul{margin-bottom:16px}html body ol,html body ul{padding-left:2em}html body ol.no-list,html body ul.no-list{padding:0;list-style-type:none}html body ol ol,html body ol ul,html body ul ol,html body ul ul{margin-top:0;margin-bottom:0}html body li{margin-bottom:0}html body li.task-list-item{list-style:none}html body li>p{margin-top:0;margin-bottom:0}html body .task-list-item-checkbox{margin:0 .2em .25em -1.8em;vertical-align:middle}html body .task-list-item-checkbox:hover{cursor:pointer}html body blockquote{margin:16px 0;font-size:inherit;padding:0 15px;color:#5c5c5c;background-color:#f0f0f0;border-left:4px solid #d6d6d6}html body blockquote>:first-child{margin-top:0}html body blockquote>:last-child{margin-bottom:0}html body hr{height:4px;margin:32px 0;background-color:#d6d6d6;border:0 none}html body table{margin:10px 0 15px 0;border-collapse:collapse;border-spacing:0;display:block;width:100%;overflow:auto;word-break:normal;word-break:keep-all}html body table th{font-weight:700;color:#000}html body table td,html body table th{border:1px solid #d6d6d6;padding:6px 13px}html body dl{padding:0}html body dl dt{padding:0;margin-top:16px;font-size:1em;font-style:italic;font-weight:700}html body dl dd{padding:0 16px;margin-bottom:16px}html body code{font-family:Menlo,Monaco,Consolas,'Courier New',monospace;font-size:.85em;color:#000;background-color:#f0f0f0;border-radius:3px;padding:.2em 0}html body code::after,html body code::before{letter-spacing:-.2em;content:'\00a0'}html body pre>code{padding:0;margin:0;word-break:normal;white-space:pre;background:0 0;border:0}html body .highlight{margin-bottom:16px}html body .highlight pre,html body pre{padding:1em;overflow:auto;line-height:1.45;border:#d6d6d6;border-radius:3px}html body .highlight pre{margin-bottom:0;word-break:normal}html body pre code,html body pre tt{display:inline;max-width:initial;padding:0;margin:0;overflow:initial;line-height:inherit;word-wrap:normal;background-color:transparent;border:0}html body pre code:after,html body pre code:before,html body pre tt:after,html body pre tt:before{content:normal}html body blockquote,html body dl,html body ol,html body p,html body pre,html body ul{margin-top:0;margin-bottom:16px}html body kbd{color:#000;border:1px solid #d6d6d6;border-bottom:2px solid #c7c7c7;padding:2px 4px;background-color:#f0f0f0;border-radius:3px}@media print{html body{background-color:#fff}html body h1,html body h2,html body h3,html body h4,html body h5,html body h6{color:#000;page-break-after:avoid}html body blockquote{color:#5c5c5c}html body pre{page-break-inside:avoid}html body table{display:table}html body img{display:block;max-width:100%;max-height:100%}html body code,html body pre{word-wrap:break-word;white-space:pre}}.markdown-preview{width:100%;height:100%;box-sizing:border-box}.markdown-preview ul{list-style:disc}.markdown-preview ul ul{list-style:circle}.markdown-preview ul ul ul{list-style:square}.markdown-preview ol{list-style:decimal}.markdown-preview ol ol,.markdown-preview ul ol{list-style-type:lower-roman}.markdown-preview ol ol ol,.markdown-preview ol ul ol,.markdown-preview ul ol ol,.markdown-preview ul ul ol{list-style-type:lower-alpha}.markdown-preview .newpage,.markdown-preview .pagebreak{page-break-before:always}.markdown-preview pre.line-numbers{position:relative;padding-left:3.8em;counter-reset:linenumber}.markdown-preview pre.line-numbers>code{position:relative}.markdown-preview pre.line-numbers .line-numbers-rows{position:absolute;pointer-events:none;top:1em;font-size:100%;left:0;width:3em;letter-spacing:-1px;border-right:1px solid #999;-webkit-user-select:none;-moz-user-select:none;-ms-user-select:none;user-select:none}.markdown-preview pre.line-numbers .line-numbers-rows>span{pointer-events:none;display:block;counter-increment:linenumber}.markdown-preview pre.line-numbers .line-numbers-rows>span:before{content:counter(linenumber);color:#999;display:block;padding-right:.8em;text-align:right}.markdown-preview .mathjax-exps .MathJax_Display{text-align:center!important}.markdown-preview:not([data-for=preview]) .code-chunk .code-chunk-btn-group{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .status{display:none}.markdown-preview:not([data-for=preview]) .code-chunk .output-div{margin-bottom:16px}.markdown-preview .md-toc{padding:0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link div,.markdown-preview .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}.markdown-preview .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}.scrollbar-style::-webkit-scrollbar{width:8px}.scrollbar-style::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}.scrollbar-style::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode]){position:relative;width:100%;height:100%;top:0;left:0;margin:0;padding:0;overflow:auto}html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{position:relative;top:0;min-height:100vh}@media screen and (min-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em calc(50% - 457px + 2em)}}@media screen and (max-width:914px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode]) .markdown-preview{font-size:14px!important;padding:1em}}@media print{html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{display:none}}html body[for=html-export]:not([data-presentation-mode]) #sidebar-toc-btn{position:fixed;bottom:8px;left:8px;font-size:28px;cursor:pointer;color:inherit;z-index:99;width:32px;text-align:center;opacity:.4}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] #sidebar-toc-btn{opacity:1}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc{position:fixed;top:0;left:0;width:300px;height:100%;padding:32px 0 48px 0;font-size:14px;box-shadow:0 0 4px rgba(150,150,150,.33);box-sizing:border-box;overflow:auto;background-color:inherit}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar{width:8px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-track{border-radius:10px;background-color:transparent}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc::-webkit-scrollbar-thumb{border-radius:5px;background-color:rgba(150,150,150,.66);border:4px solid rgba(150,150,150,.66);background-clip:content-box}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc a{text-decoration:none}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc{padding:0 16px}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link{display:inline;padding:.25rem 0}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link div,html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper .md-toc-link p{display:inline}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .md-sidebar-toc .md-toc .md-toc-link-wrapper.highlighted .md-toc-link{font-weight:800}html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{left:300px;width:calc(100% - 300px);padding:2em calc(50% - 457px - 300px / 2);margin:0;box-sizing:border-box}@media screen and (max-width:1274px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{padding:2em}}@media screen and (max-width:450px){html body[for=html-export]:not([data-presentation-mode])[html-show-sidebar-toc] .markdown-preview{width:100%}}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .markdown-preview{left:50%;transform:translateX(-50%)}html body[for=html-export]:not([data-presentation-mode]):not([html-show-sidebar-toc]) .md-sidebar-toc{display:none}
+/* Please visit the URL below for more information: */
+/*   https://shd101wyy.github.io/markdown-preview-enhanced/#/customize-css */
+
+      </style>
+      <!-- The content below will be included at the end of the <head> element. --><script type="text/javascript">
+  document.addEventListener("DOMContentLoaded", function () {
+    // your code here
+  });
+</script></head><body for="html-export">
+    
+    
+      <div class="crossnote markdown-preview  ">
+      
+<h1 id="eeg-eye-state-classification--complete-analysis-report">EEG Eye State Classification — Complete Analysis Report </h1>
+<hr>
+<h2 id="table-of-contents">Table of Contents </h2>
+<ol>
+<li><a href="#1-data-description-overview">Data Description Overview</a>
+<ul>
+<li>1.1 <a href="#11-dataset-loading">Dataset Loading</a></li>
+<li>1.2 <a href="#12-basic-statistics">Basic Statistics</a></li>
+<li>1.3 <a href="#13-class-distribution">Class Distribution</a></li>
+</ul>
+</li>
+<li><a href="#2-data-imputation">Data Imputation</a></li>
+<li><a href="#3-data-visualization-raw-data">Data Visualization (Raw Data)</a>
+<ul>
+<li>3.1 <a href="#31-class-balance">Class Balance</a></li>
+<li>3.2 <a href="#32-correlation-heatmap">Correlation Heatmap</a></li>
+<li>3.3 <a href="#33-box-plots">Box Plots</a></li>
+<li>3.4 <a href="#34-histograms">Histograms</a></li>
+<li>3.5 <a href="#35-violin-plots">Violin Plots</a></li>
+</ul>
+</li>
+<li><a href="#4-outlier-removal">Outlier Removal</a></li>
+<li><a href="#5-data-visualization-after-outlier-removal">Data Visualization (After Outlier Removal)</a>
+<ul>
+<li>5.1 <a href="#51-class-balance">Class Balance</a></li>
+<li>5.2 <a href="#52-correlation-heatmap">Correlation Heatmap</a></li>
+<li>5.3 <a href="#53-box-plots">Box Plots</a></li>
+<li>5.4 <a href="#54-histograms">Histograms</a></li>
+<li>5.5 <a href="#55-violin-plots">Violin Plots</a></li>
+</ul>
+</li>
+<li><a href="#6-log-normalization">Log-Normalization</a></li>
+<li><a href="#7-data-visualization-after-normalization">Data Visualization (After Normalization)</a>
+<ul>
+<li>7.1 <a href="#71-class-balance">Class Balance</a></li>
+<li>7.2 <a href="#72-correlation-heatmap">Correlation Heatmap</a></li>
+<li>7.3 <a href="#73-box-plots">Box Plots</a></li>
+<li>7.4 <a href="#74-histograms">Histograms</a></li>
+<li>7.5 <a href="#75-violin-plots">Violin Plots</a></li>
+</ul>
+</li>
+<li><a href="#8-fft-spectrogram-and-psd-analysis">FFT, Spectrogram and PSD Analysis</a>
+<ul>
+<li>8.1 <a href="#81-fft-frequency-spectrum">FFT Frequency Spectrum</a></li>
+<li>8.2 <a href="#82-power-spectral-density-psd">Power Spectral Density (PSD)</a></li>
+<li>8.3 <a href="#83-spectrogram-analysis">Spectrogram Analysis</a></li>
+</ul>
+</li>
+<li><a href="#9-pca-and-lda-analysis">PCA and LDA Analysis</a>
+<ul>
+<li>9.1 <a href="#91-pca">PCA</a></li>
+<li>9.2 <a href="#92-lda">LDA</a></li>
+<li>9.3 <a href="#93-clustering-evaluation">Clustering Evaluation</a></li>
+</ul>
+</li>
+<li><a href="#10-machine-learning-classification">Machine Learning Classification</a>
+<ul>
+<li>10.1 <a href="#101-logistic-regression">Logistic Regression</a></li>
+<li>10.2 <a href="#102-k-nearest-neighbors">K-Nearest Neighbors</a></li>
+<li>10.3 <a href="#103-support-vector-machine">Support Vector Machine</a></li>
+<li>10.4 <a href="#104-random-forest">Random Forest</a></li>
+<li>10.5 <a href="#105-gradient-boosting">Gradient Boosting</a></li>
+<li>10.6 <a href="#106-ml-model-comparison">ML Model Comparison</a></li>
+</ul>
+</li>
+<li><a href="#11-neural-network-classification">Neural Network Classification</a>
+<ul>
+<li>11.1 <a href="#111-1d-cnn-on-raw-eeg">1D CNN on Raw EEG</a></li>
+<li>11.2 <a href="#112-cnn-on-spectrograms">CNN on Spectrograms</a></li>
+<li>11.3 <a href="#113-lstm--rnn">LSTM / RNN</a></li>
+<li>11.4 <a href="#114-neural-network-comparison">Neural Network Comparison</a></li>
+</ul>
+</li>
+<li><a href="#12-final-comparison-and-inference">Final Comparison and Inference</a>
+<ul>
+<li>12.1 <a href="#121-unified-comparison-table">Unified Comparison Table</a></li>
+<li>12.2 <a href="#122-inference-and-recommendation">Inference and Recommendation</a></li>
+</ul>
+</li>
+</ol>
+<hr>
+<h1 id="1-data-description-overview">1. Data Description Overview </h1>
+<p>This section provides an overview of the EEG eye-state dataset collected using an Emotiv EPOC neuroheadset with 14 electrodes at a sampling rate of 128 Hz. The binary target variable <code>eyeDetection</code> indicates whether the subject's eyes were open (1) or closed (0).</p>
+<h2 id="11-dataset-loading">1.1 Dataset Loading </h2>
+<p>The dataset is loaded from <code>dataset/eeg_data_og.csv</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Property</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Samples</td>
+<td>14980</td>
+</tr>
+<tr>
+<td>Features</td>
+<td>14</td>
+</tr>
+<tr>
+<td>Target Column</td>
+<td>eyeDetection</td>
+</tr>
+<tr>
+<td>Sampling Rate</td>
+<td>128 Hz</td>
+</tr>
+<tr>
+<td>Recording Duration</td>
+<td>117.0 seconds</td>
+</tr>
+</tbody>
+</table>
+<h2 id="12-basic-statistics">1.2 Basic Statistics </h2>
+<p>Descriptive statistics for all 14 EEG channels (micro-volts).</p>
+<table>
+<thead>
+<tr>
+<th>Channel</th>
+<th>Count</th>
+<th>Mean</th>
+<th>Std</th>
+<th>Min</th>
+<th>25%</th>
+<th>50%</th>
+<th>75%</th>
+<th>Max</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AF3</td>
+<td>14980</td>
+<td>4321.92</td>
+<td>2492.07</td>
+<td>1030.77</td>
+<td>4280.51</td>
+<td>4294.36</td>
+<td>4311.79</td>
+<td>309231.00</td>
+</tr>
+<tr>
+<td>F7</td>
+<td>14980</td>
+<td>4009.77</td>
+<td>45.94</td>
+<td>2830.77</td>
+<td>3990.77</td>
+<td>4005.64</td>
+<td>4023.08</td>
+<td>7804.62</td>
+</tr>
+<tr>
+<td>F3</td>
+<td>14980</td>
+<td>4264.02</td>
+<td>44.43</td>
+<td>1040.00</td>
+<td>4250.26</td>
+<td>4262.56</td>
+<td>4270.77</td>
+<td>6880.51</td>
+</tr>
+<tr>
+<td>FC5</td>
+<td>14980</td>
+<td>4164.95</td>
+<td>5216.40</td>
+<td>2453.33</td>
+<td>4108.21</td>
+<td>4120.51</td>
+<td>4132.31</td>
+<td>642564.00</td>
+</tr>
+<tr>
+<td>T7</td>
+<td>14980</td>
+<td>4341.74</td>
+<td>34.74</td>
+<td>2089.74</td>
+<td>4331.79</td>
+<td>4338.97</td>
+<td>4347.18</td>
+<td>6474.36</td>
+</tr>
+<tr>
+<td>P7</td>
+<td>14980</td>
+<td>4644.02</td>
+<td>2924.79</td>
+<td>2768.21</td>
+<td>4611.79</td>
+<td>4617.95</td>
+<td>4626.67</td>
+<td>362564.00</td>
+</tr>
+<tr>
+<td>O1</td>
+<td>14980</td>
+<td>4110.40</td>
+<td>4600.93</td>
+<td>2086.15</td>
+<td>4057.95</td>
+<td>4070.26</td>
+<td>4083.59</td>
+<td>567179.00</td>
+</tr>
+<tr>
+<td>O2</td>
+<td>14980</td>
+<td>4616.06</td>
+<td>29.29</td>
+<td>4567.18</td>
+<td>4604.62</td>
+<td>4613.33</td>
+<td>4624.10</td>
+<td>7264.10</td>
+</tr>
+<tr>
+<td>P8</td>
+<td>14980</td>
+<td>4218.83</td>
+<td>2136.41</td>
+<td>1357.95</td>
+<td>4190.77</td>
+<td>4199.49</td>
+<td>4209.23</td>
+<td>265641.00</td>
+</tr>
+<tr>
+<td>T8</td>
+<td>14980</td>
+<td>4231.32</td>
+<td>38.05</td>
+<td>1816.41</td>
+<td>4220.51</td>
+<td>4229.23</td>
+<td>4239.49</td>
+<td>6674.36</td>
+</tr>
+<tr>
+<td>FC6</td>
+<td>14980</td>
+<td>4202.46</td>
+<td>37.79</td>
+<td>3273.33</td>
+<td>4190.26</td>
+<td>4200.51</td>
+<td>4211.28</td>
+<td>6823.08</td>
+</tr>
+<tr>
+<td>F4</td>
+<td>14980</td>
+<td>4279.23</td>
+<td>41.54</td>
+<td>2257.95</td>
+<td>4267.69</td>
+<td>4276.92</td>
+<td>4287.18</td>
+<td>7002.56</td>
+</tr>
+<tr>
+<td>F8</td>
+<td>14980</td>
+<td>4615.21</td>
+<td>1208.37</td>
+<td>86.67</td>
+<td>4590.77</td>
+<td>4603.08</td>
+<td>4617.44</td>
+<td>152308.00</td>
+</tr>
+<tr>
+<td>AF4</td>
+<td>14980</td>
+<td>4416.44</td>
+<td>5891.29</td>
+<td>1366.15</td>
+<td>4342.05</td>
+<td>4354.87</td>
+<td>4372.82</td>
+<td>715897.00</td>
+</tr>
+</tbody>
+</table>
+<h2 id="13-class-distribution">1.3 Class Distribution </h2>
+<p>Distribution of the target variable <code>eyeDetection</code>.</p>
+<table>
+<thead>
+<tr>
+<th>Eye State</th>
+<th>Count</th>
+<th>Percentage</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Closed (0)</td>
+<td>8257</td>
+<td>55.1%</td>
+</tr>
+<tr>
+<td>Open (1)</td>
+<td>6723</td>
+<td>44.9%</td>
+</tr>
+</tbody>
+</table>
+<h1 id="2-data-imputation">2. Data Imputation </h1>
+<p>Data imputation handles missing or invalid values. Missing values are detected and filled using column-wise <strong>median imputation</strong> to preserve the statistical properties of each EEG channel.</p>
+<p><strong>Result:</strong> No missing values detected across any of the 14 EEG channels. The dataset is complete.</p>
+<h1 id="3-data-visualization-raw-data">3. Data Visualization (Raw Data) </h1>
+<p>Visualizations help identify data distributions, correlations, and potential anomalies in the EEG signals.</p>
+<h2 id="31-class-balance">3.1 Class Balance </h2>
+<p>The class-balance diagram shows the distribution of samples across eye states — essential for identifying potential class imbalance that may bias downstream classifiers.</p>
+<p><img src="analysis-plots%5Cclass_balance_raw.png" alt="Class Balance"></p>
+<h2 id="32-correlation-heatmap">3.2 Correlation Heatmap </h2>
+<p>The correlation heatmap reveals linear relationships between EEG channels. Highly correlated channels may carry redundant information, motivating dimensionality reduction (e.g., PCA).</p>
+<p><img src="analysis-plots%5Ccorrelation_heatmap_raw.png" alt="Correlation Heatmap"></p>
+<h2 id="33-box-plots">3.3 Box Plots </h2>
+<p>Box plots summarize the distribution of each channel and highlight potential outliers as points beyond the whiskers (1.5x IQR rule).</p>
+<p><img src="analysis-plots%5Cboxplots_raw.png" alt="Box Plots"></p>
+<h2 id="34-histograms">3.4 Histograms </h2>
+<p>Histograms show the amplitude distribution for each EEG channel split by eye state. Deviations from normality or bimodal patterns indicate differences between open- and closed-eye signals.</p>
+<p><img src="analysis-plots%5Chistograms_raw.png" alt="Histograms"></p>
+<h2 id="35-violin-plots">3.5 Violin Plots </h2>
+<p>Violin plots combine box-plot summaries with kernel density estimates, providing a richer view of the distribution shape for each channel across eye states.</p>
+<p><img src="analysis-plots%5Cviolinplots_raw.png" alt="Violin Plots"></p>
+<h1 id="4-outlier-removal">4. Outlier Removal </h1>
+<p>Outliers in EEG data often arise from muscle artifacts, electrode displacement, or external interference. This pipeline combines the <strong>IQR method</strong> (1.5x interquartile range) with the <strong>5-sigma rule</strong> (five standard deviations from the mean). The more conservative bound is applied to retain legitimate EEG variability while removing extreme values.</p>
+<table>
+<thead>
+<tr>
+<th>Channel</th>
+<th>Lower Bound</th>
+<th>Upper Bound</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AF3</td>
+<td>4233.59</td>
+<td>4358.71</td>
+</tr>
+<tr>
+<td>F7</td>
+<td>3942.31</td>
+<td>4071.55</td>
+</tr>
+<tr>
+<td>F3</td>
+<td>4219.49</td>
+<td>4301.54</td>
+</tr>
+<tr>
+<td>FC5</td>
+<td>4072.06</td>
+<td>4168.46</td>
+</tr>
+<tr>
+<td>T7</td>
+<td>4308.70</td>
+<td>4370.27</td>
+</tr>
+<tr>
+<td>P7</td>
+<td>4589.47</td>
+<td>4648.99</td>
+</tr>
+<tr>
+<td>O1</td>
+<td>4019.49</td>
+<td>4122.05</td>
+</tr>
+<tr>
+<td>O2</td>
+<td>4575.40</td>
+<td>4653.32</td>
+</tr>
+<tr>
+<td>P8</td>
+<td>4163.08</td>
+<td>4236.92</td>
+</tr>
+<tr>
+<td>T8</td>
+<td>4192.04</td>
+<td>4267.96</td>
+</tr>
+<tr>
+<td>FC6</td>
+<td>4158.73</td>
+<td>4242.81</td>
+</tr>
+<tr>
+<td>F4</td>
+<td>4238.45</td>
+<td>4316.42</td>
+</tr>
+<tr>
+<td>F8</td>
+<td>4550.77</td>
+<td>4657.44</td>
+</tr>
+<tr>
+<td>AF4</td>
+<td>4295.90</td>
+<td>4418.97</td>
+</tr>
+</tbody>
+</table>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Original samples</td>
+<td>14980</td>
+</tr>
+<tr>
+<td>Cleaned samples</td>
+<td>11853</td>
+</tr>
+<tr>
+<td>Removed samples</td>
+<td>3127</td>
+</tr>
+<tr>
+<td>Removal percentage</td>
+<td>20.9%</td>
+</tr>
+</tbody>
+</table>
+<h1 id="5-data-visualization-after-outlier-removal">5. Data Visualization (After Outlier Removal) </h1>
+<p>Visualizations help identify data distributions, correlations, and potential anomalies in the EEG signals.</p>
+<h2 id="51-class-balance">5.1 Class Balance </h2>
+<p>The class-balance diagram shows the distribution of samples across eye states — essential for identifying potential class imbalance that may bias downstream classifiers.</p>
+<p><img src="analysis-plots%5Cclass_balance_cleaned.png" alt="Class Balance"></p>
+<h2 id="52-correlation-heatmap">5.2 Correlation Heatmap </h2>
+<p>The correlation heatmap reveals linear relationships between EEG channels. Highly correlated channels may carry redundant information, motivating dimensionality reduction (e.g., PCA).</p>
+<p><img src="analysis-plots%5Ccorrelation_heatmap_cleaned.png" alt="Correlation Heatmap"></p>
+<h2 id="53-box-plots">5.3 Box Plots </h2>
+<p>Box plots summarize the distribution of each channel and highlight potential outliers as points beyond the whiskers (1.5x IQR rule).</p>
+<p><img src="analysis-plots%5Cboxplots_cleaned.png" alt="Box Plots"></p>
+<h2 id="54-histograms">5.4 Histograms </h2>
+<p>Histograms show the amplitude distribution for each EEG channel split by eye state. Deviations from normality or bimodal patterns indicate differences between open- and closed-eye signals.</p>
+<p><img src="analysis-plots%5Chistograms_cleaned.png" alt="Histograms"></p>
+<h2 id="55-violin-plots">5.5 Violin Plots </h2>
+<p>Violin plots combine box-plot summaries with kernel density estimates, providing a richer view of the distribution shape for each channel across eye states.</p>
+<p><img src="analysis-plots%5Cviolinplots_cleaned.png" alt="Violin Plots"></p>
+<h1 id="6-log-normalization">6. Log-Normalization </h1>
+<p>Logarithmic normalization compresses the dynamic range of EEG amplitudes, reducing the impact of extreme values and making distributions more symmetric. We apply <code>log10(x - min + 1)</code> to each channel to ensure all values are positive before transformation.</p>
+<p><img src="analysis-plots%5Clog_normalization_comparison.png" alt="Log-Normalization Effect"></p>
+<table>
+<thead>
+<tr>
+<th>Channel</th>
+<th>Orig Mean</th>
+<th>Orig Std</th>
+<th>Norm Mean</th>
+<th>Norm Std</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>AF3</td>
+<td>4293.35</td>
+<td>18.97</td>
+<td>1.7538</td>
+<td>0.1548</td>
+</tr>
+<tr>
+<td>F7</td>
+<td>4003.52</td>
+<td>21.30</td>
+<td>1.7536</td>
+<td>0.1789</td>
+</tr>
+<tr>
+<td>F3</td>
+<td>4260.09</td>
+<td>12.54</td>
+<td>1.5890</td>
+<td>0.1590</td>
+</tr>
+<tr>
+<td>FC5</td>
+<td>4117.68</td>
+<td>13.79</td>
+<td>1.6337</td>
+<td>0.1500</td>
+</tr>
+<tr>
+<td>T7</td>
+<td>4338.55</td>
+<td>9.84</td>
+<td>1.4635</td>
+<td>0.1580</td>
+</tr>
+<tr>
+<td>P7</td>
+<td>4618.28</td>
+<td>9.94</td>
+<td>1.4376</td>
+<td>0.1897</td>
+</tr>
+<tr>
+<td>O1</td>
+<td>4069.58</td>
+<td>16.94</td>
+<td>1.6118</td>
+<td>0.1870</td>
+</tr>
+<tr>
+<td>O2</td>
+<td>4613.93</td>
+<td>12.21</td>
+<td>1.5661</td>
+<td>0.1587</td>
+</tr>
+<tr>
+<td>P8</td>
+<td>4199.73</td>
+<td>12.00</td>
+<td>1.5422</td>
+<td>0.1681</td>
+</tr>
+<tr>
+<td>T8</td>
+<td>4229.20</td>
+<td>12.48</td>
+<td>1.5487</td>
+<td>0.1785</td>
+</tr>
+<tr>
+<td>FC6</td>
+<td>4199.27</td>
+<td>14.12</td>
+<td>1.5821</td>
+<td>0.1930</td>
+</tr>
+<tr>
+<td>F4</td>
+<td>4275.49</td>
+<td>11.84</td>
+<td>1.5549</td>
+<td>0.1595</td>
+</tr>
+<tr>
+<td>F8</td>
+<td>4601.37</td>
+<td>16.96</td>
+<td>1.6807</td>
+<td>0.1907</td>
+</tr>
+<tr>
+<td>AF4</td>
+<td>4354.39</td>
+<td>19.06</td>
+<td>1.7468</td>
+<td>0.1725</td>
+</tr>
+</tbody>
+</table>
+<h1 id="7-data-visualization-after-normalization">7. Data Visualization (After Normalization) </h1>
+<p>Visualizations help identify data distributions, correlations, and potential anomalies in the EEG signals.</p>
+<h2 id="71-class-balance">7.1 Class Balance </h2>
+<p>The class-balance diagram shows the distribution of samples across eye states — essential for identifying potential class imbalance that may bias downstream classifiers.</p>
+<p><img src="analysis-plots%5Cclass_balance_normalized.png" alt="Class Balance"></p>
+<h2 id="72-correlation-heatmap">7.2 Correlation Heatmap </h2>
+<p>The correlation heatmap reveals linear relationships between EEG channels. Highly correlated channels may carry redundant information, motivating dimensionality reduction (e.g., PCA).</p>
+<p><img src="analysis-plots%5Ccorrelation_heatmap_normalized.png" alt="Correlation Heatmap"></p>
+<h2 id="73-box-plots">7.3 Box Plots </h2>
+<p>Box plots summarize the distribution of each channel and highlight potential outliers as points beyond the whiskers (1.5x IQR rule).</p>
+<p><img src="analysis-plots%5Cboxplots_normalized.png" alt="Box Plots"></p>
+<h2 id="74-histograms">7.4 Histograms </h2>
+<p>Histograms show the amplitude distribution for each EEG channel split by eye state. Deviations from normality or bimodal patterns indicate differences between open- and closed-eye signals.</p>
+<p><img src="analysis-plots%5Chistograms_normalized.png" alt="Histograms"></p>
+<h2 id="75-violin-plots">7.5 Violin Plots </h2>
+<p>Violin plots combine box-plot summaries with kernel density estimates, providing a richer view of the distribution shape for each channel across eye states.</p>
+<p><img src="analysis-plots%5Cviolinplots_normalized.png" alt="Violin Plots"></p>
+<h1 id="8-fft-spectrogram-and-psd-analysis">8. FFT, Spectrogram and PSD Analysis </h1>
+<p>Frequency-domain analysis transforms EEG signals from the time domain to the frequency domain, revealing the power distribution across brain wave bands: <strong>Delta</strong> (0.5-4 Hz), <strong>Theta</strong> (4-8 Hz), <strong>Alpha</strong> (8-12 Hz), <strong>Beta</strong> (12-30 Hz), and <strong>Gamma</strong> (30-64 Hz). This is critical for EEG eye-state classification since alpha power characteristically increases when eyes are closed (the <strong>Berger effect</strong>).</p>
+<h2 id="81-fft-frequency-spectrum">8.1 FFT Frequency Spectrum </h2>
+<p>The Fast Fourier Transform decomposes EEG signals into constituent frequencies. The frequency spectrum shows the power at each frequency, highlighting dominant brain-wave activity.</p>
+<p><img src="analysis-plots%5Cfft_frequency_spectrum.png" alt="FFT Frequency Spectrum"></p>
+<h2 id="82-power-spectral-density-psd">8.2 Power Spectral Density (PSD) </h2>
+<p>Welch's method estimates the PSD with reduced variance compared to raw periodograms. Comparing PSD between eyes-open and eyes-closed states reveals characteristic changes — notably increased alpha power (8-12 Hz) during eye closure.</p>
+<p><img src="analysis-plots%5Cpsd_analysis.png" alt="PSD Analysis"></p>
+<h2 id="83-spectrogram-analysis">8.3 Spectrogram Analysis </h2>
+<p>Spectrograms provide a time-frequency representation of EEG signals, showing how the power at different frequencies evolves over time. This is particularly useful for identifying transient events and state transitions — and serves as the input representation for the CNN-based deep-learning model in Section 11.</p>
+<p><img src="analysis-plots%5Cspectrogram_AF3.png" alt="Spectrogram AF3"></p>
+<p><img src="analysis-plots%5Cspectrogram_O1.png" alt="Spectrogram O1"></p>
+<p><img src="analysis-plots%5Cspectrogram_T7.png" alt="Spectrogram T7"></p>
+<h1 id="9-pca-and-lda-analysis">9. PCA and LDA Analysis </h1>
+<p>Dimensionality-reduction techniques project high-dimensional EEG data into lower-dimensional spaces while preserving meaningful structure. <strong>PCA</strong> (unsupervised) maximises variance; <strong>LDA</strong> (supervised) maximises class separability — both are fundamental tools for understanding the data geometry before classification.</p>
+<h2 id="91-pca">9.1 PCA </h2>
+<p>Principal Component Analysis identifies orthogonal directions of maximum variance. Applied to the 14 EEG channels, PCA reveals how much of the total signal variance can be captured in fewer dimensions.</p>
+<p><img src="analysis-plots%5Cpca_variance.png" alt="PCA Variance"></p>
+<table>
+<thead>
+<tr>
+<th>Component</th>
+<th>Variance Explained (%)</th>
+<th>Cumulative (%)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PC1</td>
+<td>43.03</td>
+<td>43.03</td>
+</tr>
+<tr>
+<td>PC2</td>
+<td>14.67</td>
+<td>57.70</td>
+</tr>
+<tr>
+<td>PC3</td>
+<td>12.09</td>
+<td>69.79</td>
+</tr>
+<tr>
+<td>PC4</td>
+<td>5.63</td>
+<td>75.42</td>
+</tr>
+<tr>
+<td>PC5</td>
+<td>5.48</td>
+<td>80.89</td>
+</tr>
+<tr>
+<td>PC6</td>
+<td>3.75</td>
+<td>84.65</td>
+</tr>
+<tr>
+<td>PC7</td>
+<td>3.14</td>
+<td>87.79</td>
+</tr>
+<tr>
+<td>PC8</td>
+<td>2.59</td>
+<td>90.38</td>
+</tr>
+<tr>
+<td>PC9</td>
+<td>2.31</td>
+<td>92.69</td>
+</tr>
+<tr>
+<td>PC10</td>
+<td>2.24</td>
+<td>94.93</td>
+</tr>
+<tr>
+<td>PC11</td>
+<td>1.82</td>
+<td>96.74</td>
+</tr>
+<tr>
+<td>PC12</td>
+<td>1.30</td>
+<td>98.05</td>
+</tr>
+<tr>
+<td>PC13</td>
+<td>1.25</td>
+<td>99.29</td>
+</tr>
+<tr>
+<td>PC14</td>
+<td>0.71</td>
+<td>100.00</td>
+</tr>
+</tbody>
+</table>
+<p><strong>11 components</strong> are required to capture &gt;= 95% of total variance.</p>
+<p><img src="analysis-plots%5Cpca_2d_projection.png" alt="PCA 2D Projection"></p>
+<h2 id="92-lda">9.2 LDA </h2>
+<p>Linear Discriminant Analysis finds the projection that maximises the ratio of between-class to within-class variance. For binary eye-state classification, LDA yields a single discriminant dimension that optimally separates the two classes.</p>
+<p><img src="analysis-plots%5Clda_1d_projection.png" alt="LDA 1D Projection"></p>
+<h2 id="93-clustering-evaluation">9.3 Clustering Evaluation </h2>
+<p>Clustering metrics quantify how well the reduced representations separate eye states, independent of the downstream classifier.</p>
+<table>
+<thead>
+<tr>
+<th>Method</th>
+<th>Silhouette Score (higher better)</th>
+<th>Davies-Bouldin Index (lower better)</th>
+<th>Calinski-Harabasz Score (higher better)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>PCA (2D)</td>
+<td>0.0112</td>
+<td>12.0940</td>
+<td>61.70</td>
+</tr>
+<tr>
+<td>LDA (1D)</td>
+<td>0.1302</td>
+<td>1.8011</td>
+<td>2135.05</td>
+</tr>
+</tbody>
+</table>
+<h1 id="10-machine-learning-classification">10. Machine Learning Classification </h1>
+<p>This section evaluates five classical machine-learning algorithms on the standardised EEG features using a 70/30 stratified train-test split. Each model is assessed on accuracy, precision, recall, F1-score, and AUC-ROC.</p>
+<h2 id="101-logistic-regression">10.1 Logistic Regression </h2>
+<p>Logistic Regression models the probability of eye state as a logistic function of the EEG features. It serves as a simple, interpretable baseline for binary classification.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Accuracy</td>
+<td>0.6904</td>
+</tr>
+<tr>
+<td>Precision</td>
+<td>0.6842</td>
+</tr>
+<tr>
+<td>Recall</td>
+<td>0.5942</td>
+</tr>
+<tr>
+<td>F1-Score</td>
+<td>0.6360</td>
+</tr>
+<tr>
+<td>AUC-ROC</td>
+<td>0.7441</td>
+</tr>
+<tr>
+<td>Training Time</td>
+<td>0.032s</td>
+</tr>
+</tbody>
+</table>
+<h2 id="102-k-nearest-neighbors">10.2 K-Nearest Neighbors </h2>
+<p>KNN classifies each sample by majority vote among its k nearest neighbours in feature space. It makes no assumptions about the data distribution.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Accuracy</td>
+<td>0.9603</td>
+</tr>
+<tr>
+<td>Precision</td>
+<td>0.9619</td>
+</tr>
+<tr>
+<td>Recall</td>
+<td>0.9506</td>
+</tr>
+<tr>
+<td>F1-Score</td>
+<td>0.9562</td>
+</tr>
+<tr>
+<td>AUC-ROC</td>
+<td>0.9919</td>
+</tr>
+<tr>
+<td>Training Time</td>
+<td>0.033s</td>
+</tr>
+</tbody>
+</table>
+<h2 id="103-support-vector-machine">10.3 Support Vector Machine </h2>
+<p>SVM finds the optimal hyperplane that maximises the margin between classes. With an RBF kernel, it can capture non-linear decision boundaries.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Accuracy</td>
+<td>0.9339</td>
+</tr>
+<tr>
+<td>Precision</td>
+<td>0.9396</td>
+</tr>
+<tr>
+<td>Recall</td>
+<td>0.9135</td>
+</tr>
+<tr>
+<td>F1-Score</td>
+<td>0.9264</td>
+</tr>
+<tr>
+<td>AUC-ROC</td>
+<td>0.9809</td>
+</tr>
+<tr>
+<td>Training Time</td>
+<td>14.509s</td>
+</tr>
+</tbody>
+</table>
+<h2 id="104-random-forest">10.4 Random Forest </h2>
+<p>Random Forest builds an ensemble of decision trees trained on bootstrapped subsets, reducing overfitting through bagging and random feature selection.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Accuracy</td>
+<td>0.9272</td>
+</tr>
+<tr>
+<td>Precision</td>
+<td>0.9309</td>
+</tr>
+<tr>
+<td>Recall</td>
+<td>0.9074</td>
+</tr>
+<tr>
+<td>F1-Score</td>
+<td>0.9190</td>
+</tr>
+<tr>
+<td>AUC-ROC</td>
+<td>0.9812</td>
+</tr>
+<tr>
+<td>Training Time</td>
+<td>0.973s</td>
+</tr>
+</tbody>
+</table>
+<h2 id="105-gradient-boosting">10.5 Gradient Boosting </h2>
+<p>Gradient Boosting sequentially builds weak learners (trees), each correcting errors of the previous ensemble. It often achieves top accuracy on structured/tabular data.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Accuracy</td>
+<td>0.8493</td>
+</tr>
+<tr>
+<td>Precision</td>
+<td>0.8478</td>
+</tr>
+<tr>
+<td>Recall</td>
+<td>0.8153</td>
+</tr>
+<tr>
+<td>F1-Score</td>
+<td>0.8312</td>
+</tr>
+<tr>
+<td>AUC-ROC</td>
+<td>0.9338</td>
+</tr>
+<tr>
+<td>Training Time</td>
+<td>6.376s</td>
+</tr>
+</tbody>
+</table>
+<h2 id="106-ml-model-comparison">10.6 ML Model Comparison </h2>
+<p>Summary comparison of all classical ML models.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Accuracy</th>
+<th>Precision</th>
+<th>Recall</th>
+<th>F1-Score</th>
+<th>AUC-ROC</th>
+<th>Train Time (s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Logistic Regression</td>
+<td>0.6904</td>
+<td>0.6842</td>
+<td>0.5942</td>
+<td>0.6360</td>
+<td>0.7441</td>
+<td>0.032</td>
+</tr>
+<tr>
+<td>K-Nearest Neighbors</td>
+<td>0.9603</td>
+<td>0.9619</td>
+<td>0.9506</td>
+<td>0.9562</td>
+<td>0.9919</td>
+<td>0.033</td>
+</tr>
+<tr>
+<td>Support Vector Machine</td>
+<td>0.9339</td>
+<td>0.9396</td>
+<td>0.9135</td>
+<td>0.9264</td>
+<td>0.9809</td>
+<td>14.509</td>
+</tr>
+<tr>
+<td>Random Forest</td>
+<td>0.9272</td>
+<td>0.9309</td>
+<td>0.9074</td>
+<td>0.9190</td>
+<td>0.9812</td>
+<td>0.973</td>
+</tr>
+<tr>
+<td>Gradient Boosting</td>
+<td>0.8493</td>
+<td>0.8478</td>
+<td>0.8153</td>
+<td>0.8312</td>
+<td>0.9338</td>
+<td>6.376</td>
+</tr>
+</tbody>
+</table>
+<p><img src="analysis-plots%5Cml_confusion_matrices.png" alt="ML Confusion Matrices"></p>
+<p><img src="analysis-plots%5Cml_comparison_chart.png" alt="ML Comparison Chart"></p>
+<h1 id="11-neural-network-classification">11. Neural Network Classification </h1>
+<p>Deep-learning models learn hierarchical feature representations from raw EEG signals. This section evaluates three architectures: a <strong>1D CNN</strong> on raw multi-channel EEG windows, a <strong>2D CNN on spectrograms</strong>, and an <strong>LSTM</strong> (recurrent) network — all trained to predict eye state from temporal EEG patterns.</p>
+<p>Window size = 64 samples, step = 16. Total windows: 737 (train 515, test 222).</p>
+<h2 id="111-1d-cnn-on-raw-eeg">11.1 1D CNN on Raw EEG </h2>
+<p>A 1D Convolutional Neural Network processes windows of multi-channel EEG data (64 samples x 14 channels), learning local temporal patterns through convolutional filters before classifying eye state.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Accuracy</td>
+<td>0.9505</td>
+</tr>
+<tr>
+<td>Precision</td>
+<td>0.9684</td>
+</tr>
+<tr>
+<td>Recall</td>
+<td>0.9200</td>
+</tr>
+<tr>
+<td>F1-Score</td>
+<td>0.9436</td>
+</tr>
+<tr>
+<td>AUC-ROC</td>
+<td>0.9904</td>
+</tr>
+<tr>
+<td>Training Time</td>
+<td>11.145s</td>
+</tr>
+</tbody>
+</table>
+<p><img src="analysis-plots%5Ccnn1d_training.png" alt="1D CNN Training History"></p>
+<h2 id="112-cnn-on-spectrograms">11.2 CNN on Spectrograms </h2>
+<p>A 2D CNN processes spectrogram representations of EEG windows — treating the time-frequency image with channel depth as input. This leverages the CNN's ability to detect spatial patterns in frequency-time maps, similar to image classification.</p>
+<p>Spectrogram window = 128 samples, step = 64. Shape per sample: (17, 13, 14) (freq x time x channels). Total: 184.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Accuracy</td>
+<td>0.4464</td>
+</tr>
+<tr>
+<td>Precision</td>
+<td>0.4464</td>
+</tr>
+<tr>
+<td>Recall</td>
+<td>1.0000</td>
+</tr>
+<tr>
+<td>F1-Score</td>
+<td>0.6173</td>
+</tr>
+<tr>
+<td>AUC-ROC</td>
+<td>0.6865</td>
+</tr>
+<tr>
+<td>Training Time</td>
+<td>4.666s</td>
+</tr>
+</tbody>
+</table>
+<p><img src="analysis-plots%5Ccnn2d_spectrogram_training.png" alt="CNN Spectrogram Training History"></p>
+<h2 id="113-lstm--rnn">11.3 LSTM / RNN </h2>
+<p>Long Short-Term Memory networks capture long-range temporal dependencies in sequential EEG data. Unlike CNNs that focus on local patterns, LSTMs maintain a memory cell that can selectively retain or discard information across the 64-sample window — making them well-suited for modelling brain-state transitions.</p>
+<table>
+<thead>
+<tr>
+<th>Metric</th>
+<th>Value</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>Accuracy</td>
+<td>0.9144</td>
+</tr>
+<tr>
+<td>Precision</td>
+<td>0.8857</td>
+</tr>
+<tr>
+<td>Recall</td>
+<td>0.9300</td>
+</tr>
+<tr>
+<td>F1-Score</td>
+<td>0.9073</td>
+</tr>
+<tr>
+<td>AUC-ROC</td>
+<td>0.9742</td>
+</tr>
+<tr>
+<td>Training Time</td>
+<td>15.954s</td>
+</tr>
+</tbody>
+</table>
+<p><img src="analysis-plots%5Clstm_training.png" alt="LSTM Training History"></p>
+<h2 id="114-neural-network-comparison">11.4 Neural Network Comparison </h2>
+<p>Side-by-side comparison of all neural-network architectures.</p>
+<table>
+<thead>
+<tr>
+<th>Model</th>
+<th>Accuracy</th>
+<th>Precision</th>
+<th>Recall</th>
+<th>F1-Score</th>
+<th>AUC-ROC</th>
+<th>Train Time (s)</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1D CNN</td>
+<td>0.9505</td>
+<td>0.9684</td>
+<td>0.9200</td>
+<td>0.9436</td>
+<td>0.9904</td>
+<td>11.145</td>
+</tr>
+<tr>
+<td>CNN (Spectrogram)</td>
+<td>0.4464</td>
+<td>0.4464</td>
+<td>1.0000</td>
+<td>0.6173</td>
+<td>0.6865</td>
+<td>4.666</td>
+</tr>
+<tr>
+<td>LSTM</td>
+<td>0.9144</td>
+<td>0.8857</td>
+<td>0.9300</td>
+<td>0.9073</td>
+<td>0.9742</td>
+<td>15.954</td>
+</tr>
+</tbody>
+</table>
+<p><img src="analysis-plots%5Cnn_comparison_chart.png" alt="Neural Network Comparison"></p>
+<p><img src="analysis-plots%5Cnn_confusion_matrices.png" alt="NN Confusion Matrices"></p>
+<h1 id="12-final-comparison-and-inference">12. Final Comparison and Inference </h1>
+<p>This section unifies all models — classical ML and deep learning — ranked by F1-Score, and provides a recommendation for the best model.</p>
+<h2 id="121-unified-comparison-table">12.1 Unified Comparison Table </h2>
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>Model</th>
+<th>Accuracy</th>
+<th>Precision</th>
+<th>Recall</th>
+<th>F1-Score</th>
+<th>AUC-ROC</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>1</td>
+<td>K-Nearest Neighbors</td>
+<td>0.9603</td>
+<td>0.9619</td>
+<td>0.9506</td>
+<td>0.9562</td>
+<td>0.9919</td>
+</tr>
+<tr>
+<td>2</td>
+<td>1D CNN</td>
+<td>0.9505</td>
+<td>0.9684</td>
+<td>0.9200</td>
+<td>0.9436</td>
+<td>0.9904</td>
+</tr>
+<tr>
+<td>3</td>
+<td>Support Vector Machine</td>
+<td>0.9339</td>
+<td>0.9396</td>
+<td>0.9135</td>
+<td>0.9264</td>
+<td>0.9809</td>
+</tr>
+<tr>
+<td>4</td>
+<td>Random Forest</td>
+<td>0.9272</td>
+<td>0.9309</td>
+<td>0.9074</td>
+<td>0.9190</td>
+<td>0.9812</td>
+</tr>
+<tr>
+<td>5</td>
+<td>LSTM</td>
+<td>0.9144</td>
+<td>0.8857</td>
+<td>0.9300</td>
+<td>0.9073</td>
+<td>0.9742</td>
+</tr>
+<tr>
+<td>6</td>
+<td>Gradient Boosting</td>
+<td>0.8493</td>
+<td>0.8478</td>
+<td>0.8153</td>
+<td>0.8312</td>
+<td>0.9338</td>
+</tr>
+<tr>
+<td>7</td>
+<td>Logistic Regression</td>
+<td>0.6904</td>
+<td>0.6842</td>
+<td>0.5942</td>
+<td>0.6360</td>
+<td>0.7441</td>
+</tr>
+<tr>
+<td>8</td>
+<td>CNN (Spectrogram)</td>
+<td>0.4464</td>
+<td>0.4464</td>
+<td>1.0000</td>
+<td>0.6173</td>
+<td>0.6865</td>
+</tr>
+</tbody>
+</table>
+<p><img src="analysis-plots%5Cfinal_comparison.png" alt="Final Model Comparison"></p>
+<h2 id="122-inference-and-recommendation">12.2 Inference and Recommendation </h2>
+<h3 id="best-overall-model-k-nearest-neighbors">Best Overall Model: <strong>K-Nearest Neighbors</strong> </h3>
+<p>Based on the comprehensive evaluation, <strong>K-Nearest Neighbors</strong> achieves the highest F1-Score of <strong>0.9562</strong> with an accuracy of <strong>0.9603</strong> and AUC-ROC of <strong>0.9919</strong>.</p>
+<p>The runner-up is <strong>1D CNN</strong> with an F1-Score of <strong>0.9436</strong>.</p>
+<p><strong>Key Observations:</strong></p>
+<ul>
+<li>
+<p>The classical ML model (<strong>K-Nearest Neighbors</strong>) matches or outperforms deep learning (<strong>1D CNN</strong>) by <strong>1.26</strong> percentage points in F1-Score.</p>
+</li>
+<li>
+<p>For this dataset size, ensemble tree methods capture the relevant patterns without requiring the architectural complexity of deep learning.</p>
+</li>
+<li>
+<p><strong>For production deployment</strong>, <strong>K-Nearest Neighbors</strong> is recommended when maximum classification performance is required.</p>
+</li>
+<li>
+<p><strong>For real-time / low-latency applications</strong>, <strong>Logistic Regression</strong> offers the fastest training (0.032s) with an F1-Score of 0.6360.</p>
+</li>
+</ul>
+<hr>
+<p><em>Report generated automatically by the EEG Eye State Classification Pipeline.</em></p>
+
+      </div>
+      
+      
+    
+    
+    
+    
+    
+    
+  
+    </body></html>
