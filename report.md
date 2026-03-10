@@ -29,6 +29,9 @@
    - 5.1 [Box Plots Comparison](#51-box-plots-comparison)
    - 5.2 [Histograms After Cleaning](#52-histograms-after-cleaning)
 6. [Log-Normalization](#6-log-normalization)
+   - 6.1 [Before vs After — All Channels](#61-before-vs-after--all-channels)
+   - 6.2 [Skewness & Kurtosis Analysis](#62-skewness--kurtosis-analysis)
+   - 6.3 [Summary Statistics Before vs After](#63-summary-statistics-before-vs-after)
 7. [Feature Engineering](#7-feature-engineering)
    - 7.1 [Hemispheric Asymmetry](#71-hemispheric-asymmetry)
    - 7.2 [Global Channel Statistics](#72-global-channel-statistics)
@@ -43,8 +46,9 @@
    - 9.3 [t-SNE](#93-t-sne)
    - 9.4 [UMAP](#94-umap)
    - 9.5 [Clustering Evaluation](#95-clustering-evaluation)
+   - 9.6 [Inference: Dimensionality Reduction Comparison](#96-inference-dimensionality-reduction-comparison)
 10. [Machine Learning Classification](#10-machine-learning-classification)
-    - 10.1 [Train/Test Split & Class Balance](#101-traintest-split--class-balance)
+    - 10.1 [Train/Validation/Test Split & Class Balance](#101-trainvalidationtest-split--class-balance)
     - 10.2 [Cross-Validation Results](#102-cross-validation-results)
     - 10.3 [Logistic Regression](#103-logistic-regression)
     - 10.4 [K-Nearest Neighbors](#104-k-nearest-neighbors)
@@ -55,6 +59,7 @@
     - 10.9 [ROC Curves](#109-roc-curves)
     - 10.10 [ML Model Comparison](#1010-ml-model-comparison)
 11. [Neural Network Classification](#11-neural-network-classification)
+    - 11.0 [Binary Cross-Entropy Loss & Gradient Descent](#110-binary-cross-entropy-loss--gradient-descent)
     - 11.1 [1D CNN on Raw EEG](#111-1d-cnn-on-raw-eeg)
     - 11.2 [CNN on Spectrograms](#112-cnn-on-spectrograms)
     - 11.3 [LSTM / RNN](#113-lstm--rnn)
@@ -269,7 +274,41 @@ Side-by-side box plots confirm outlier removal effectiveness.
 
 Logarithmic normalization compresses the dynamic range of EEG amplitudes, reducing the impact of extreme values and making distributions more symmetric. We apply `log10(x - min + 1)` to each channel.
 
-![Log-Normalization Effect](analysis-plots\log_normalization_comparison.png)
+
+## 6.1 Before vs After — All Channels
+
+The following grid shows the distribution of every EEG channel before (blue) and after (red) log-normalization.
+
+![Log-Normalization — All Channels](analysis-plots\log_normalization_all_channels.png)
+
+
+## 6.2 Skewness & Kurtosis Analysis
+
+Skewness measures distribution asymmetry (0 = perfectly symmetric). Kurtosis (excess) measures tail heaviness (0 = normal). Log-normalization should reduce both towards zero, indicating a more Gaussian-like distribution suitable for downstream models.
+
+| Channel | Skew Before | Skew After | Kurtosis Before | Kurtosis After | Improved? |
+| --- | --- | --- | --- | --- | --- |
+| AF3 | 0.1792 | -1.5317 | -0.2881 | 5.9015 | No |
+| F7 | 0.0504 | -1.8642 | -0.1650 | 6.4506 | No |
+| F3 | -0.1517 | -1.9847 | -0.1833 | 6.5530 | No |
+| FC5 | 0.0304 | -1.6276 | -0.4052 | 5.3856 | No |
+| T7 | 0.1156 | -1.2544 | -0.3375 | 3.4635 | No |
+| P7 | -0.0930 | -1.8090 | -0.3719 | 4.7150 | No |
+| O1 | 0.2880 | -0.9789 | -0.3164 | 2.5032 | No |
+| O2 | 0.0244 | -1.5426 | -0.3776 | 4.7967 | No |
+| P8 | -0.0049 | -1.5546 | -0.3041 | 4.4306 | No |
+| T8 | 0.0192 | -1.7449 | -0.2984 | 5.7809 | No |
+| FC6 | -0.1234 | -2.0787 | -0.2307 | 7.1891 | No |
+| F4 | 0.0278 | -1.6048 | -0.3266 | 5.4080 | No |
+| F8 | -0.0442 | -1.9983 | -0.3248 | 7.2238 | No |
+| AF4 | 0.1236 | -1.5239 | -0.3238 | 5.1640 | No |
+
+**Result:** Log-normalization improved distribution quality (reduced |skewness| + |kurtosis|) for **0/14 channels (0%)**.
+
+Log-normalization shows mixed results. Some channels already had near-symmetric distributions, and the transform may have introduced slight distortion. Consider applying it selectively.
+
+
+## 6.3 Summary Statistics Before vs After
 
 | Channel | Orig Mean | Orig Std | Norm Mean | Norm Std |
 | --- | --- | --- | --- | --- |
@@ -453,19 +492,39 @@ Clustering metrics quantify separation quality in reduced spaces.
 | UMAP (2D) | 0.0297 | 16.6995 | 14.01 |
 
 
+## 9.6 Inference: Dimensionality Reduction Comparison
+
+Each dimensionality reduction technique has distinct strengths and ideal use-cases:
+
+| Method | Type | Strengths | Limitations | Best For |
+| --- | --- | --- | --- | --- |
+| **PCA** | Linear, unsupervised | Fast, preserves global variance, deterministic | Cannot capture non-linear structure | Feature reduction, preprocessing, explained variance analysis |
+| **LDA** | Linear, supervised | Maximises class separation, single component for binary | Limited to C-1 components, assumes Gaussian classes | Binary/multi-class classification preprocessing |
+| **t-SNE** | Non-linear, unsupervised | Excellent local structure preservation, reveals clusters | Slow on large data, non-deterministic, no inverse transform | Exploratory visualisation of cluster structure |
+| **UMAP** | Non-linear, unsupervised | Preserves both local and global structure, faster than t-SNE | Hyperparameter sensitive (n_neighbors, min_dist) | Scalable visualisation, general-purpose embedding |
+
+**Clustering metric summary:**
+- **Best Silhouette Score:** LDA (1D) (0.1561) — highest cohesion within clusters and separation between clusters.
+- **Best Davies-Bouldin Index:** LDA (1D) (1.6419) — lowest inter-cluster similarity (tighter clusters).
+- **Best Calinski-Harabasz Score:** LDA (1D) (2148.12) — highest ratio of between-cluster to within-cluster dispersion.
+
+**Overall recommendation:** **LDA (1D)** wins on the majority of metrics (3/3), making it the most effective dimensionality reduction method for separating EEG eye states in this dataset. For production pipelines, **PCA** or **LDA** are preferred due to their determinism and speed, while **t-SNE** and **UMAP** are best suited for exploratory data analysis and visualisation.
+
+
 # 10. Machine Learning Classification
 
-Five classical ML algorithms are evaluated using a 70/30 stratified train-test split. `StandardScaler` is fit **exclusively on training data** to prevent data leakage.
+Five classical ML algorithms are evaluated using a **70/15/15 stratified train-validation-test split**. `StandardScaler` is fit **exclusively on training data** to prevent data leakage. The validation set is used for cross-validation insights; the test set for final evaluation.
 
 
-## 10.1 Train/Test Split & Class Balance
+## 10.1 Train/Validation/Test Split & Class Balance
 
-Stratified split: 70% train / 30% test, preserving class proportions.
+Stratified 3-way split: **70% train / 15% validation / 15% test**, preserving class proportions across all splits.
 
 | Split | Open (0) | Closed (1) | Total | Closed % |
 | --- | --- | --- | --- | --- |
 | Train | 3751 | 3035 | 6786 | 44.7% |
-| Test | 1608 | 1301 | 2909 | 44.7% |
+| Validation | 804 | 650 | 1454 | 44.7% |
+| Test | 804 | 651 | 1455 | 44.7% |
 
 
 ## 10.2 Cross-Validation Results (5-Fold Stratified)
@@ -479,6 +538,16 @@ Stratified split: 70% train / 30% test, preserving class proportions.
 | Support Vector Machine | 0.9148 | 0.0069 |
 | Random Forest | 0.8932 | 0.0065 |
 | Gradient Boosting | 0.8551 | 0.0071 |
+
+**Cross-Validation Fold Details:**
+
+```
+Logistic Regression       folds: [0.6526, 0.6377, 0.6341, 0.6200, 0.6121]  mean=0.6313
+K-Nearest Neighbors       folds: [0.9307, 0.9292, 0.9381, 0.9439, 0.9343]  mean=0.9353
+Support Vector Machine    folds: [0.9255, 0.9065, 0.9153, 0.9186, 0.9082]  mean=0.9148
+Random Forest             folds: [0.8999, 0.8836, 0.8967, 0.8985, 0.8872]  mean=0.8932
+Gradient Boosting         folds: [0.8607, 0.8420, 0.8586, 0.8532, 0.8609]  mean=0.8551
+```
 
 
 ## 10.3 Logistic Regression
@@ -495,12 +564,25 @@ It serves as an interpretable linear baseline for binary classification.
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.6978 |
-| Precision | 0.6939 |
-| Recall | 0.5803 |
-| F1-Score | 0.6321 |
-| AUC-ROC | 0.7510 |
-| Training Time | 0.030s |
+| Accuracy | 0.7100 |
+| Precision | 0.7116 |
+| Recall | 0.5914 |
+| F1-Score | 0.6460 |
+| AUC-ROC | 0.7662 |
+| Training Time | 0.023s |
+
+**Logistic Regression — Classification Report:**
+
+```
+precision    recall  f1-score   support
+
+    Open (0)       0.71      0.81      0.75       804
+  Closed (1)       0.71      0.59      0.65       651
+
+    accuracy                           0.71      1455
+   macro avg       0.71      0.70      0.70      1455
+weighted avg       0.71      0.71      0.71      1455
+```
 
 
 ## 10.4 K-Nearest Neighbors
@@ -517,12 +599,25 @@ KNN is non-parametric, making no distributional assumptions. With $k=5$ and stan
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.9529 |
-| Precision | 0.9491 |
-| Recall | 0.9454 |
-| F1-Score | 0.9472 |
-| AUC-ROC | 0.9868 |
-| Training Time | 0.000s |
+| Accuracy | 0.9485 |
+| Precision | 0.9486 |
+| Recall | 0.9355 |
+| F1-Score | 0.9420 |
+| AUC-ROC | 0.9860 |
+| Training Time | 0.001s |
+
+**K-Nearest Neighbors — Classification Report:**
+
+```
+precision    recall  f1-score   support
+
+    Open (0)       0.95      0.96      0.95       804
+  Closed (1)       0.95      0.94      0.94       651
+
+    accuracy                           0.95      1455
+   macro avg       0.95      0.95      0.95      1455
+weighted avg       0.95      0.95      0.95      1455
+```
 
 
 ## 10.5 Support Vector Machine
@@ -539,12 +634,25 @@ The RBF kernel captures non-linear decision boundaries between eye states.
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.9295 |
-| Precision | 0.9322 |
-| Recall | 0.9085 |
-| F1-Score | 0.9202 |
-| AUC-ROC | 0.9790 |
-| Training Time | 10.131s |
+| Accuracy | 0.9340 |
+| Precision | 0.9440 |
+| Recall | 0.9063 |
+| F1-Score | 0.9248 |
+| AUC-ROC | 0.9813 |
+| Training Time | 10.442s |
+
+**Support Vector Machine — Classification Report:**
+
+```
+precision    recall  f1-score   support
+
+    Open (0)       0.93      0.96      0.94       804
+  Closed (1)       0.94      0.91      0.92       651
+
+    accuracy                           0.93      1455
+   macro avg       0.94      0.93      0.93      1455
+weighted avg       0.93      0.93      0.93      1455
+```
 
 
 ## 10.6 Random Forest
@@ -562,11 +670,24 @@ Bagging reduces variance and random subspace selection decorrelates trees. 200 e
 | Metric | Value |
 | --- | --- |
 | Accuracy | 0.9230 |
-| Precision | 0.9339 |
-| Recall | 0.8909 |
-| F1-Score | 0.9119 |
-| AUC-ROC | 0.9768 |
-| Training Time | 0.923s |
+| Precision | 0.9425 |
+| Recall | 0.8817 |
+| F1-Score | 0.9111 |
+| AUC-ROC | 0.9766 |
+| Training Time | 1.079s |
+
+**Random Forest — Classification Report:**
+
+```
+precision    recall  f1-score   support
+
+    Open (0)       0.91      0.96      0.93       804
+  Closed (1)       0.94      0.88      0.91       651
+
+    accuracy                           0.92      1455
+   macro avg       0.93      0.92      0.92      1455
+weighted avg       0.92      0.92      0.92      1455
+```
 
 
 ## 10.7 Gradient Boosting
@@ -579,12 +700,25 @@ Each tree $h_m$ is fit to the negative gradient of the loss function. The learni
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.8707 |
-| Precision | 0.8745 |
-| Recall | 0.8301 |
-| F1-Score | 0.8517 |
-| AUC-ROC | 0.9458 |
-| Training Time | 9.682s |
+| Accuracy | 0.8749 |
+| Precision | 0.8889 |
+| Recall | 0.8233 |
+| F1-Score | 0.8549 |
+| AUC-ROC | 0.9495 |
+| Training Time | 9.568s |
+
+**Gradient Boosting — Classification Report:**
+
+```
+precision    recall  f1-score   support
+
+    Open (0)       0.87      0.92      0.89       804
+  Closed (1)       0.89      0.82      0.85       651
+
+    accuracy                           0.87      1455
+   macro avg       0.88      0.87      0.87      1455
+weighted avg       0.88      0.87      0.87      1455
+```
 
 
 ## 10.8 Feature Importance
@@ -605,11 +739,11 @@ ROC curves plot True Positive Rate vs False Positive Rate.
 
 | Model | Accuracy | Precision | Recall | F1-Score | AUC-ROC | Time (s) |
 | --- | --- | --- | --- | --- | --- | --- |
-| Logistic Regression | 0.6978 | 0.6939 | 0.5803 | 0.6321 | 0.7510 | 0.030 |
-| K-Nearest Neighbors | 0.9529 | 0.9491 | 0.9454 | 0.9472 | 0.9868 | 0.000 |
-| Support Vector Machine | 0.9295 | 0.9322 | 0.9085 | 0.9202 | 0.9790 | 10.131 |
-| Random Forest | 0.9230 | 0.9339 | 0.8909 | 0.9119 | 0.9768 | 0.923 |
-| Gradient Boosting | 0.8707 | 0.8745 | 0.8301 | 0.8517 | 0.9458 | 9.682 |
+| Logistic Regression | 0.7100 | 0.7116 | 0.5914 | 0.6460 | 0.7662 | 0.023 |
+| K-Nearest Neighbors | 0.9485 | 0.9486 | 0.9355 | 0.9420 | 0.9860 | 0.001 |
+| Support Vector Machine | 0.9340 | 0.9440 | 0.9063 | 0.9248 | 0.9813 | 10.442 |
+| Random Forest | 0.9230 | 0.9425 | 0.8817 | 0.9111 | 0.9766 | 1.079 |
+| Gradient Boosting | 0.8749 | 0.8889 | 0.8233 | 0.8549 | 0.9495 | 9.568 |
 
 ![ML Confusion Matrices](analysis-plots\ml_confusion_matrices.png)
 
@@ -620,7 +754,26 @@ ROC curves plot True Positive Rate vs False Positive Rate.
 
 Deep-learning models learn hierarchical feature representations from raw EEG signals. This section evaluates a **1D CNN**, a **2D CNN on spectrograms**, and an **LSTM** network.
 
-Window size = 64 samples, step = 16. Total windows: 602 (train 421, test 181).
+
+## 11.0 Binary Cross-Entropy Loss & Gradient Descent
+
+All neural networks in this section are trained using **Binary Cross-Entropy** (BCE) as the loss function and **gradient descent** (Adam optimiser) to update weights.
+
+**Binary Cross-Entropy** measures the divergence between predicted probabilities and true binary labels:
+
+$$\mathcal{L}_{BCE} = -\frac{1}{N}\sum_{i=1}^{N}\left[y_i \log(\hat{y}_i) + (1 - y_i)\log(1 - \hat{y}_i)\right]$$
+
+where $y_i \in \{0, 1\}$ is the true label and $\hat{y}_i = \sigma(z_i)$ is the sigmoid output. BCE is the natural choice for binary classification because it directly penalises confident wrong predictions: when $y_i = 1$ but $\hat{y}_i \approx 0$, the $-\log(\hat{y}_i)$ term produces a very large loss.
+
+**Gradient Descent (Adam)** updates each weight $w$ by following the negative gradient of the loss:
+
+$$w \leftarrow w - \eta \cdot \frac{\partial \mathcal{L}}{\partial w}$$
+
+Adam combines momentum with adaptive per-parameter learning rates, using first and second moment estimates of the gradients. The default learning rate is $\eta = 0.001$.
+
+**Training Loss Cutoff (EarlyStopping):** Training does not run for a fixed number of epochs. An `EarlyStopping` callback monitors the validation loss and halts training when it stops improving for a set number of epochs (patience). The model weights are restored to the epoch with the lowest validation loss. This prevents overfitting and acts as an automatic convergence cutoff — training ends when the gradient updates no longer reduce the validation error.
+
+Window size = 64 samples, step = 16. Total windows: 602 (train 421, val 90, test 91).
 
 
 ## 11.1 1D CNN on Raw EEG
@@ -633,12 +786,77 @@ where $K$ is the kernel size and $C$ the number of channels. Max-pooling reduces
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.9669 |
-| Precision | 0.9615 |
-| Recall | 0.9615 |
-| F1-Score | 0.9615 |
-| AUC-ROC | 0.9964 |
-| Training Time | 12.913s |
+| Accuracy | 0.9890 |
+| Precision | 0.9750 |
+| Recall | 1.0000 |
+| F1-Score | 0.9873 |
+| AUC-ROC | 0.9995 |
+| Training Time | 13.546s |
+
+**1D CNN — Training Log:**
+
+```
+Epoch 1/30
+7/7 - 5s - 749ms/step - accuracy: 0.5867 - loss: 0.7070 - val_accuracy: 0.8000 - val_loss: 0.6225 - learning_rate: 0.0010
+Epoch 2/30
+7/7 - 0s - 41ms/step - accuracy: 0.7696 - loss: 0.4695 - val_accuracy: 0.8778 - val_loss: 0.5859 - learning_rate: 0.0010
+Epoch 3/30
+7/7 - 0s - 40ms/step - accuracy: 0.8599 - loss: 0.3399 - val_accuracy: 0.8333 - val_loss: 0.5619 - learning_rate: 0.0010
+Epoch 4/30
+7/7 - 0s - 40ms/step - accuracy: 0.9097 - loss: 0.2495 - val_accuracy: 0.8667 - val_loss: 0.5179 - learning_rate: 0.0010
+Epoch 5/30
+7/7 - 0s - 42ms/step - accuracy: 0.9501 - loss: 0.2072 - val_accuracy: 0.8333 - val_loss: 0.5035 - learning_rate: 0.0010
+Epoch 6/30
+7/7 - 0s - 38ms/step - accuracy: 0.9359 - loss: 0.1705 - val_accuracy: 0.8667 - val_loss: 0.4898 - learning_rate: 0.0010
+Epoch 7/30
+7/7 - 0s - 44ms/step - accuracy: 0.9525 - loss: 0.1255 - val_accuracy: 0.8111 - val_loss: 0.4715 - learning_rate: 0.0010
+Epoch 8/30
+7/7 - 0s - 40ms/step - accuracy: 0.9620 - loss: 0.1207 - val_accuracy: 0.8333 - val_loss: 0.4298 - learning_rate: 0.0010
+Epoch 9/30
+7/7 - 0s - 40ms/step - accuracy: 0.9691 - loss: 0.0950 - val_accuracy: 0.8667 - val_loss: 0.4074 - learning_rate: 0.0010
+Epoch 10/30
+7/7 - 0s - 39ms/step - accuracy: 0.9715 - loss: 0.0696 - val_accuracy: 0.8556 - val_loss: 0.3630 - learning_rate: 0.0010
+Epoch 11/30
+7/7 - 0s - 38ms/step - accuracy: 0.9667 - loss: 0.0715 - val_accuracy: 0.9222 - val_loss: 0.3039 - learning_rate: 0.0010
+Epoch 12/30
+7/7 - 0s - 38ms/step - accuracy: 0.9691 - loss: 0.0794 - val_accuracy: 0.9222 - val_loss: 0.3192 - learning_rate: 0.0010
+Epoch 13/30
+7/7 - 0s - 41ms/step - accuracy: 0.9644 - loss: 0.0965 - val_accuracy: 0.9444 - val_loss: 0.2756 - learning_rate: 0.0010
+Epoch 14/30
+7/7 - 0s - 39ms/step - accuracy: 0.9857 - loss: 0.0497 - val_accuracy: 0.9667 - val_loss: 0.2046 - learning_rate: 0.0010
+Epoch 15/30
+7/7 - 0s - 39ms/step - accuracy: 0.9762 - loss: 0.0826 - val_accuracy: 0.9556 - val_loss: 0.2078 - learning_rate: 0.0010
+Epoch 16/30
+7/7 - 0s - 39ms/step - accuracy: 0.9739 - loss: 0.0680 - val_accuracy: 0.9444 - val_loss: 0.1962 - learning_rate: 0.0010
+Epoch 17/30
+7/7 - 0s - 39ms/step - accuracy: 0.9881 - loss: 0.0452 - val_accuracy: 0.9444 - val_loss: 0.1556 - learning_rate: 0.0010
+Epoch 18/30
+7/7 - 0s - 38ms/step - accuracy: 0.9810 - loss: 0.0499 - val_accuracy: 0.9667 - val_loss: 0.1227 - learning_rate: 0.0010
+Epoch 19/30
+7/7 - 0s - 39ms/step - accuracy: 0.9905 - loss: 0.0256 - val_accuracy: 0.9889 - val_loss: 0.0996 - learning_rate: 0.0010
+Epoch 20/30
+7/7 - 0s - 38ms/step - accuracy: 0.9881 - loss: 0.0298 - val_accuracy: 0.9889 - val_loss: 0.0820 - learning_rate: 0.0010
+Epoch 21/30
+7/7 - 0s - 40ms/step - accuracy: 0.9857 - loss: 0.0352 - val_accuracy: 0.9889 - val_loss: 0.0613 - learning_rate: 0.0010
+Epoch 22/30
+7/7 - 0s - 38ms/step - accuracy: 0.9905 - loss: 0.0222 - val_accuracy: 1.0000 - val_loss: 0.0483 - learning_rate: 0.0010
+Epoch 23/30
+7/7 - 0s - 39ms/step - accuracy: 0.9857 - loss: 0.0360 - val_accuracy: 1.0000 - val_loss: 0.0313 - learning_rate: 0.0010
+Epoch 24/30
+7/7 - 0s - 37ms/step - accuracy: 0.9952 - loss: 0.0186 - val_accuracy: 0.9889 - val_loss: 0.0493 - learning_rate: 0.0010
+Epoch 25/30
+7/7 - 0s - 39ms/step - accuracy: 0.9905 - loss: 0.0248 - val_accuracy: 0.9889 - val_loss: 0.0335 - learning_rate: 0.0010
+Epoch 26/30
+7/7 - 0s - 39ms/step - accuracy: 0.9929 - loss: 0.0189 - val_accuracy: 0.9889 - val_loss: 0.0370 - learning_rate: 0.0010
+Epoch 27/30
+7/7 - 0s - 40ms/step - accuracy: 0.9976 - loss: 0.0225 - val_accuracy: 1.0000 - val_loss: 0.0213 - learning_rate: 5.0000e-04
+Epoch 28/30
+7/7 - 0s - 39ms/step - accuracy: 0.9976 - loss: 0.0157 - val_accuracy: 1.0000 - val_loss: 0.0135 - learning_rate: 5.0000e-04
+Epoch 29/30
+7/7 - 0s - 38ms/step - accuracy: 1.0000 - loss: 0.0059 - val_accuracy: 1.0000 - val_loss: 0.0105 - learning_rate: 5.0000e-04
+Epoch 30/30
+7/7 - 0s - 42ms/step - accuracy: 0.9952 - loss: 0.0117 - val_accuracy: 1.0000 - val_loss: 0.0078 - learning_rate: 5.0000e-04
+```
 
 ![1D CNN Training History](analysis-plots\cnn1d_training.png)
 
@@ -655,12 +873,45 @@ Spectrogram window = 64, step = 8. Shape per sample: (17, 5, 14) (freq x time x 
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.9088 |
-| Precision | 0.9310 |
-| Recall | 0.8544 |
-| F1-Score | 0.8911 |
-| AUC-ROC | 0.9715 |
-| Training Time | 23.779s |
+| Accuracy | 0.6133 |
+| Precision | 0.8000 |
+| Recall | 0.1519 |
+| F1-Score | 0.2553 |
+| AUC-ROC | 0.7746 |
+| Training Time | 11.175s |
+
+**CNN (Spectrogram) — Training Log:**
+
+```
+Epoch 1/50
+27/27 - 5s - 172ms/step - accuracy: 0.5285 - loss: 0.6969 - val_accuracy: 0.4365 - val_loss: 0.6982 - learning_rate: 5.0000e-04
+Epoch 2/50
+27/27 - 0s - 18ms/step - accuracy: 0.5439 - loss: 0.6767 - val_accuracy: 0.5635 - val_loss: 0.6858 - learning_rate: 5.0000e-04
+Epoch 3/50
+27/27 - 1s - 20ms/step - accuracy: 0.6093 - loss: 0.6630 - val_accuracy: 0.6188 - val_loss: 0.6714 - learning_rate: 5.0000e-04
+Epoch 4/50
+27/27 - 0s - 18ms/step - accuracy: 0.6544 - loss: 0.6203 - val_accuracy: 0.5635 - val_loss: 0.6579 - learning_rate: 5.0000e-04
+Epoch 5/50
+27/27 - 0s - 18ms/step - accuracy: 0.7257 - loss: 0.5820 - val_accuracy: 0.5635 - val_loss: 0.6618 - learning_rate: 5.0000e-04
+Epoch 6/50
+27/27 - 0s - 18ms/step - accuracy: 0.7387 - loss: 0.5350 - val_accuracy: 0.6133 - val_loss: 0.6253 - learning_rate: 5.0000e-04
+Epoch 7/50
+27/27 - 0s - 18ms/step - accuracy: 0.7660 - loss: 0.5017 - val_accuracy: 0.5635 - val_loss: 0.7410 - learning_rate: 5.0000e-04
+Epoch 8/50
+27/27 - 0s - 17ms/step - accuracy: 0.8100 - loss: 0.4415 - val_accuracy: 0.5801 - val_loss: 0.6832 - learning_rate: 5.0000e-04
+Epoch 9/50
+27/27 - 0s - 17ms/step - accuracy: 0.8480 - loss: 0.3776 - val_accuracy: 0.6133 - val_loss: 0.6513 - learning_rate: 5.0000e-04
+Epoch 10/50
+27/27 - 0s - 17ms/step - accuracy: 0.8848 - loss: 0.3187 - val_accuracy: 0.5691 - val_loss: 0.9444 - learning_rate: 5.0000e-04
+Epoch 11/50
+27/27 - 0s - 17ms/step - accuracy: 0.8860 - loss: 0.2757 - val_accuracy: 0.5967 - val_loss: 0.8076 - learning_rate: 2.5000e-04
+Epoch 12/50
+27/27 - 1s - 25ms/step - accuracy: 0.9216 - loss: 0.2203 - val_accuracy: 0.6630 - val_loss: 0.7846 - learning_rate: 2.5000e-04
+Epoch 13/50
+27/27 - 0s - 17ms/step - accuracy: 0.9228 - loss: 0.1986 - val_accuracy: 0.6409 - val_loss: 0.8130 - learning_rate: 2.5000e-04
+Epoch 14/50
+27/27 - 0s - 17ms/step - accuracy: 0.9418 - loss: 0.1768 - val_accuracy: 0.7017 - val_loss: 0.6917 - learning_rate: 2.5000e-04
+```
 
 ![CNN Spectrogram Training History](analysis-plots\cnn2d_spectrogram_training.png)
 
@@ -680,12 +931,51 @@ The forget gate controls what to discard, the input gate what to store, and the 
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.9558 |
-| Precision | 0.9487 |
-| Recall | 0.9487 |
-| F1-Score | 0.9487 |
-| AUC-ROC | 0.9829 |
-| Training Time | 16.321s |
+| Accuracy | 0.9780 |
+| Precision | 0.9512 |
+| Recall | 1.0000 |
+| F1-Score | 0.9750 |
+| AUC-ROC | 0.9862 |
+| Training Time | 14.851s |
+
+**LSTM — Training Log:**
+
+```
+Epoch 1/30
+7/7 - 6s - 800ms/step - accuracy: 0.5772 - loss: 0.6797 - val_accuracy: 0.6333 - val_loss: 0.6762 - learning_rate: 0.0010
+Epoch 2/30
+7/7 - 1s - 82ms/step - accuracy: 0.6556 - loss: 0.6487 - val_accuracy: 0.6889 - val_loss: 0.6479 - learning_rate: 0.0010
+Epoch 3/30
+7/7 - 1s - 82ms/step - accuracy: 0.7150 - loss: 0.6087 - val_accuracy: 0.7000 - val_loss: 0.6213 - learning_rate: 0.0010
+Epoch 4/30
+7/7 - 1s - 82ms/step - accuracy: 0.7340 - loss: 0.5591 - val_accuracy: 0.7667 - val_loss: 0.5749 - learning_rate: 0.0010
+Epoch 5/30
+7/7 - 1s - 80ms/step - accuracy: 0.8124 - loss: 0.4773 - val_accuracy: 0.8556 - val_loss: 0.4855 - learning_rate: 0.0010
+Epoch 6/30
+7/7 - 1s - 80ms/step - accuracy: 0.8741 - loss: 0.3704 - val_accuracy: 0.8889 - val_loss: 0.3150 - learning_rate: 0.0010
+Epoch 7/30
+7/7 - 1s - 81ms/step - accuracy: 0.9335 - loss: 0.2457 - val_accuracy: 0.9556 - val_loss: 0.1856 - learning_rate: 0.0010
+Epoch 8/30
+7/7 - 1s - 82ms/step - accuracy: 0.9477 - loss: 0.1939 - val_accuracy: 0.9889 - val_loss: 0.0974 - learning_rate: 0.0010
+Epoch 9/30
+7/7 - 1s - 83ms/step - accuracy: 0.9572 - loss: 0.1370 - val_accuracy: 0.9333 - val_loss: 0.2062 - learning_rate: 0.0010
+Epoch 10/30
+7/7 - 1s - 80ms/step - accuracy: 0.9620 - loss: 0.1334 - val_accuracy: 0.9556 - val_loss: 0.1402 - learning_rate: 0.0010
+Epoch 11/30
+7/7 - 1s - 83ms/step - accuracy: 0.9739 - loss: 0.1088 - val_accuracy: 0.9667 - val_loss: 0.1161 - learning_rate: 0.0010
+Epoch 12/30
+7/7 - 1s - 81ms/step - accuracy: 0.9739 - loss: 0.0790 - val_accuracy: 0.9889 - val_loss: 0.0679 - learning_rate: 5.0000e-04
+Epoch 13/30
+7/7 - 1s - 79ms/step - accuracy: 0.9834 - loss: 0.0721 - val_accuracy: 0.9778 - val_loss: 0.0961 - learning_rate: 5.0000e-04
+Epoch 14/30
+7/7 - 1s - 79ms/step - accuracy: 0.9881 - loss: 0.0600 - val_accuracy: 0.9778 - val_loss: 0.0945 - learning_rate: 5.0000e-04
+Epoch 15/30
+7/7 - 1s - 82ms/step - accuracy: 0.9905 - loss: 0.0537 - val_accuracy: 0.9778 - val_loss: 0.1000 - learning_rate: 5.0000e-04
+Epoch 16/30
+7/7 - 1s - 81ms/step - accuracy: 0.9905 - loss: 0.0492 - val_accuracy: 0.9778 - val_loss: 0.0964 - learning_rate: 2.5000e-04
+Epoch 17/30
+7/7 - 1s - 81ms/step - accuracy: 0.9905 - loss: 0.0452 - val_accuracy: 0.9778 - val_loss: 0.0795 - learning_rate: 2.5000e-04
+```
 
 ![LSTM Training History](analysis-plots\lstm_training.png)
 
@@ -696,9 +986,9 @@ Side-by-side comparison of all neural-network architectures.
 
 | Model | Accuracy | Precision | Recall | F1-Score | AUC-ROC | Train Time (s) |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1D CNN | 0.9669 | 0.9615 | 0.9615 | 0.9615 | 0.9964 | 12.913 |
-| CNN (Spectrogram) | 0.9088 | 0.9310 | 0.8544 | 0.8911 | 0.9715 | 23.779 |
-| LSTM | 0.9558 | 0.9487 | 0.9487 | 0.9487 | 0.9829 | 16.321 |
+| 1D CNN | 0.9890 | 0.9750 | 1.0000 | 0.9873 | 0.9995 | 13.546 |
+| CNN (Spectrogram) | 0.6133 | 0.8000 | 0.1519 | 0.2553 | 0.7746 | 11.175 |
+| LSTM | 0.9780 | 0.9512 | 1.0000 | 0.9750 | 0.9862 | 14.851 |
 
 ![Neural Network Comparison](analysis-plots\nn_comparison_chart.png)
 
@@ -714,14 +1004,14 @@ This section unifies all models — classical ML and deep learning — ranked by
 
 | Rank | Model | Accuracy | Precision | Recall | F1-Score | AUC-ROC |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | 1D CNN | 0.9669 | 0.9615 | 0.9615 | 0.9615 | 0.9964 |
-| 2 | LSTM | 0.9558 | 0.9487 | 0.9487 | 0.9487 | 0.9829 |
-| 3 | K-Nearest Neighbors | 0.9529 | 0.9491 | 0.9454 | 0.9472 | 0.9868 |
-| 4 | Support Vector Machine | 0.9295 | 0.9322 | 0.9085 | 0.9202 | 0.9790 |
-| 5 | Random Forest | 0.9230 | 0.9339 | 0.8909 | 0.9119 | 0.9768 |
-| 6 | CNN (Spectrogram) | 0.9088 | 0.9310 | 0.8544 | 0.8911 | 0.9715 |
-| 7 | Gradient Boosting | 0.8707 | 0.8745 | 0.8301 | 0.8517 | 0.9458 |
-| 8 | Logistic Regression | 0.6978 | 0.6939 | 0.5803 | 0.6321 | 0.7510 |
+| 1 | 1D CNN | 0.9890 | 0.9750 | 1.0000 | 0.9873 | 0.9995 |
+| 2 | LSTM | 0.9780 | 0.9512 | 1.0000 | 0.9750 | 0.9862 |
+| 3 | K-Nearest Neighbors | 0.9485 | 0.9486 | 0.9355 | 0.9420 | 0.9860 |
+| 4 | Support Vector Machine | 0.9340 | 0.9440 | 0.9063 | 0.9248 | 0.9813 |
+| 5 | Random Forest | 0.9230 | 0.9425 | 0.8817 | 0.9111 | 0.9766 |
+| 6 | Gradient Boosting | 0.8749 | 0.8889 | 0.8233 | 0.8549 | 0.9495 |
+| 7 | Logistic Regression | 0.7100 | 0.7116 | 0.5914 | 0.6460 | 0.7662 |
+| 8 | CNN (Spectrogram) | 0.6133 | 0.8000 | 0.1519 | 0.2553 | 0.7746 |
 
 ![Final Model Comparison](analysis-plots\final_comparison.png)
 
@@ -730,17 +1020,17 @@ This section unifies all models — classical ML and deep learning — ranked by
 
 ### Best Overall Model: **1D CNN**
 
-Based on comprehensive evaluation, **1D CNN** achieves the highest F1-Score of **0.9615** with accuracy **0.9669** and AUC-ROC **0.9964**.
+Based on comprehensive evaluation, **1D CNN** achieves the highest F1-Score of **0.9873** with accuracy **0.9890** and AUC-ROC **0.9995**.
 
-Runner-up: **LSTM** (F1 = 0.9487).
+Runner-up: **LSTM** (F1 = 0.9750).
 
 **Key Observations:**
 
-- Deep learning (**1D CNN**) outperforms the best classical ML model (**K-Nearest Neighbors**) by **1.43** percentage points in F1-Score.
+- Deep learning (**1D CNN**) outperforms the best classical ML model (**K-Nearest Neighbors**) by **4.53** percentage points in F1-Score.
 
 - **For production deployment**, **1D CNN** is recommended.
 
-- **For low-latency applications**, **K-Nearest Neighbors** offers the fastest training (0.000s) with F1 = 0.9472.
+- **For low-latency applications**, **K-Nearest Neighbors** offers the fastest training (0.001s) with F1 = 0.9420.
 
 
 

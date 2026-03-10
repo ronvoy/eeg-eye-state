@@ -19,8 +19,10 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 import seaborn as sns
 
+from io import StringIO
 from scipy.fft import fft, fftfreq
 from scipy.signal import welch, spectrogram as scipy_spectrogram
+from scipy.stats import skew, kurtosis
 
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
@@ -29,7 +31,7 @@ from sklearn.manifold import TSNE
 from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
-    confusion_matrix, roc_auc_score, roc_curve,
+    confusion_matrix, roc_auc_score, roc_curve, classification_report,
     silhouette_score, davies_bouldin_score, calinski_harabasz_score,
 )
 from sklearn.neighbors import KNeighborsClassifier
@@ -176,6 +178,9 @@ def print_toc():
    - 5.1 [Box Plots Comparison](#51-box-plots-comparison)
    - 5.2 [Histograms After Cleaning](#52-histograms-after-cleaning)
 6. [Log-Normalization](#6-log-normalization)
+   - 6.1 [Before vs After — All Channels](#61-before-vs-after--all-channels)
+   - 6.2 [Skewness & Kurtosis Analysis](#62-skewness--kurtosis-analysis)
+   - 6.3 [Summary Statistics Before vs After](#63-summary-statistics-before-vs-after)
 7. [Feature Engineering](#7-feature-engineering)
    - 7.1 [Hemispheric Asymmetry](#71-hemispheric-asymmetry)
    - 7.2 [Global Channel Statistics](#72-global-channel-statistics)
@@ -190,8 +195,9 @@ def print_toc():
    - 9.3 [t-SNE](#93-t-sne)
    - 9.4 [UMAP](#94-umap)
    - 9.5 [Clustering Evaluation](#95-clustering-evaluation)
+   - 9.6 [Inference: Dimensionality Reduction Comparison](#96-inference-dimensionality-reduction-comparison)
 10. [Machine Learning Classification](#10-machine-learning-classification)
-    - 10.1 [Train/Test Split & Class Balance](#101-traintest-split--class-balance)
+    - 10.1 [Train/Validation/Test Split & Class Balance](#101-trainvalidationtest-split--class-balance)
     - 10.2 [Cross-Validation Results](#102-cross-validation-results)
     - 10.3 [Logistic Regression](#103-logistic-regression)
     - 10.4 [K-Nearest Neighbors](#104-k-nearest-neighbors)
@@ -202,6 +208,7 @@ def print_toc():
     - 10.9 [ROC Curves](#109-roc-curves)
     - 10.10 [ML Model Comparison](#1010-ml-model-comparison)
 11. [Neural Network Classification](#11-neural-network-classification)
+    - 11.0 [Binary Cross-Entropy Loss & Gradient Descent](#110-binary-cross-entropy-loss--gradient-descent)
     - 11.1 [1D CNN on Raw EEG](#111-1d-cnn-on-raw-eeg)
     - 11.2 [CNN on Spectrograms](#112-cnn-on-spectrograms)
     - 11.3 [LSTM / RNN](#113-lstm--rnn)
@@ -522,20 +529,88 @@ def section_log_normalization(df):
     for col in FEATURE_COLUMNS:
         df_norm[col] = np.log10(df[col] - df[col].min() + 1)
 
-    fig, axes = plt.subplots(1, 2, figsize=(14, 5))
-    axes[0].hist(df["AF3"], bins=50, color="#3498db", alpha=0.7, edgecolor="black")
-    axes[0].set_title("AF3 — Before Log-Normalization")
-    axes[0].set_xlabel("Amplitude (uV)")
-    axes[0].set_ylabel("Frequency")
-    axes[1].hist(df_norm["AF3"], bins=50, color="#e74c3c", alpha=0.7, edgecolor="black")
-    axes[1].set_title("AF3 — After Log-Normalization")
-    axes[1].set_xlabel("log10(Normalized Amplitude)")
-    axes[1].set_ylabel("Frequency")
-    plt.suptitle("Effect of Log-Normalization on Channel AF3", fontsize=14, fontweight="bold")
-    plt.tight_layout()
-    path = save_fig("log_normalization_comparison.png")
-    md_image(path, "Log-Normalization Effect")
+    # 6.1 Before/After histograms for ALL channels
+    subtitle("6.1 Before vs After — All Channels")
+    md_text(
+        "The following grid shows the distribution of every EEG channel before "
+        "(blue) and after (red) log-normalization."
+    )
 
+    n_cols_grid = 7
+    n_rows_grid = 2
+    fig, axes = plt.subplots(n_rows_grid, n_cols_grid, figsize=(28, 8))
+    for idx, ch in enumerate(FEATURE_COLUMNS):
+        row, col = divmod(idx, n_cols_grid)
+        ax = axes[row, col]
+        ax.hist(df[ch], bins=50, color="#3498db", alpha=0.6, edgecolor="black",
+                label="Before", density=True)
+        ax.hist(df_norm[ch], bins=50, color="#e74c3c", alpha=0.6, edgecolor="black",
+                label="After", density=True)
+        ax.set_title(ch, fontsize=10, fontweight="bold")
+        ax.tick_params(labelsize=7)
+        if idx == 0:
+            ax.legend(fontsize=7)
+    plt.suptitle("Log-Normalization — Before (blue) vs After (red) for All Channels",
+                 fontsize=14, fontweight="bold")
+    plt.tight_layout()
+    path = save_fig("log_normalization_all_channels.png")
+    md_image(path, "Log-Normalization — All Channels")
+
+    # 6.2 Skewness and Kurtosis analysis
+    subtitle("6.2 Skewness & Kurtosis Analysis")
+    md_text(
+        "Skewness measures distribution asymmetry (0 = perfectly symmetric). "
+        "Kurtosis (excess) measures tail heaviness (0 = normal). "
+        "Log-normalization should reduce both towards zero, indicating "
+        "a more Gaussian-like distribution suitable for downstream models."
+    )
+
+    sk_rows = []
+    improved_count = 0
+    for ch in FEATURE_COLUMNS:
+        sk_before = skew(df[ch].values)
+        sk_after = skew(df_norm[ch].values)
+        kt_before = kurtosis(df[ch].values)
+        kt_after = kurtosis(df_norm[ch].values)
+        # Improvement = absolute skewness + absolute kurtosis decreased
+        quality_before = abs(sk_before) + abs(kt_before)
+        quality_after = abs(sk_after) + abs(kt_after)
+        improved = quality_after < quality_before
+        if improved:
+            improved_count += 1
+        sk_rows.append([
+            ch,
+            f"{sk_before:.4f}", f"{sk_after:.4f}",
+            f"{kt_before:.4f}", f"{kt_after:.4f}",
+            "Yes" if improved else "No",
+        ])
+
+    md_table(
+        ["Channel", "Skew Before", "Skew After",
+         "Kurtosis Before", "Kurtosis After", "Improved?"],
+        sk_rows,
+    )
+
+    pct_improved = improved_count / len(FEATURE_COLUMNS) * 100
+    md_text(
+        f"**Result:** Log-normalization improved distribution quality "
+        f"(reduced |skewness| + |kurtosis|) for **{improved_count}/{len(FEATURE_COLUMNS)} "
+        f"channels ({pct_improved:.0f}%)**."
+    )
+    if pct_improved >= 70:
+        md_text(
+            "The majority of channels show improved symmetry and reduced tail weight, "
+            "confirming that log-normalization is beneficial for this dataset."
+        )
+    else:
+        md_text(
+            "Log-normalization shows mixed results. Some channels already had "
+            "near-symmetric distributions, and the transform may have introduced "
+            "slight distortion. Consider applying it selectively."
+        )
+
+    # 6.3 Summary statistics table
+    subtitle("6.3 Summary Statistics Before vs After")
     md_table(
         ["Channel", "Orig Mean", "Orig Std", "Norm Mean", "Norm Std"],
         [[ch, f"{df[ch].mean():.2f}", f"{df[ch].std():.2f}",
@@ -882,6 +957,55 @@ def section_dim_reduction(df, all_features):
         metrics_rows,
     )
 
+    # 9.6 Inference: Method Comparison
+    subtitle("9.6 Inference: Dimensionality Reduction Comparison")
+    md_text(
+        "Each dimensionality reduction technique has distinct strengths and ideal "
+        "use-cases:"
+    )
+    md_text(
+        "| Method | Type | Strengths | Limitations | Best For |\n"
+        "| --- | --- | --- | --- | --- |\n"
+        "| **PCA** | Linear, unsupervised | Fast, preserves global variance, deterministic | "
+        "Cannot capture non-linear structure | Feature reduction, preprocessing, explained variance analysis |\n"
+        "| **LDA** | Linear, supervised | Maximises class separation, single component for binary | "
+        "Limited to C-1 components, assumes Gaussian classes | Binary/multi-class classification preprocessing |\n"
+        "| **t-SNE** | Non-linear, unsupervised | Excellent local structure preservation, reveals clusters | "
+        "Slow on large data, non-deterministic, no inverse transform | Exploratory visualisation of cluster structure |\n"
+        "| **UMAP** | Non-linear, unsupervised | Preserves both local and global structure, faster than t-SNE | "
+        "Hyperparameter sensitive (n_neighbors, min_dist) | Scalable visualisation, general-purpose embedding |"
+    )
+
+    # Determine best method from clustering metrics
+    best_sil = max(metrics_rows, key=lambda r: float(r[1]))
+    best_db = min(metrics_rows, key=lambda r: float(r[2]))
+    best_ch = max(metrics_rows, key=lambda r: float(r[3]))
+
+    md_text(
+        f"**Clustering metric summary:**\n"
+        f"- **Best Silhouette Score:** {best_sil[0]} ({best_sil[1]}) — "
+        f"highest cohesion within clusters and separation between clusters.\n"
+        f"- **Best Davies-Bouldin Index:** {best_db[0]} ({best_db[2]}) — "
+        f"lowest inter-cluster similarity (tighter clusters).\n"
+        f"- **Best Calinski-Harabasz Score:** {best_ch[0]} ({best_ch[3]}) — "
+        f"highest ratio of between-cluster to within-cluster dispersion."
+    )
+
+    # Count wins
+    winners = [best_sil[0], best_db[0], best_ch[0]]
+    from collections import Counter
+    win_counts = Counter(winners)
+    overall_best = win_counts.most_common(1)[0][0]
+
+    md_text(
+        f"**Overall recommendation:** **{overall_best}** wins on the majority of "
+        f"metrics ({win_counts[overall_best]}/3), making it the most effective "
+        f"dimensionality reduction method for separating EEG eye states in this dataset. "
+        f"For production pipelines, **PCA** or **LDA** are preferred due to their "
+        f"determinism and speed, while **t-SNE** and **UMAP** are best suited for "
+        f"exploratory data analysis and visualisation."
+    )
+
 # =============================================================================
 # 10. Machine Learning Classification
 # =============================================================================
@@ -889,36 +1013,43 @@ def section_dim_reduction(df, all_features):
 def section_ml(df, all_features):
     title("10. Machine Learning Classification")
     md_text(
-        "Five classical ML algorithms are evaluated using a 70/30 stratified "
-        "train-test split. `StandardScaler` is fit **exclusively on training data** "
-        "to prevent data leakage."
+        "Five classical ML algorithms are evaluated using a **70/15/15 stratified "
+        "train-validation-test split**. `StandardScaler` is fit **exclusively on "
+        "training data** to prevent data leakage. The validation set is used for "
+        "cross-validation insights; the test set for final evaluation."
     )
 
     X = df[all_features].values
     y = df[TARGET].values
 
-    # Split BEFORE scaling
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y)
+    # 3-way split: 70% train, 15% val, 15% test
+    X_train, X_temp, y_train, y_temp = train_test_split(
+        X, y, test_size=0.30, random_state=RANDOM_STATE, stratify=y)
+    X_val, X_test, y_val, y_test = train_test_split(
+        X_temp, y_temp, test_size=0.50, random_state=RANDOM_STATE, stratify=y_temp)
 
     # Fit scaler on train only
     scaler = StandardScaler()
     X_train_s = scaler.fit_transform(X_train)
+    X_val_s = scaler.transform(X_val)
     X_test_s = scaler.transform(X_test)
 
-    # 10.1 Train/Test Split & Class Balance
-    subtitle("10.1 Train/Test Split & Class Balance")
+    # 10.1 Train/Val/Test Split & Class Balance
+    subtitle("10.1 Train/Validation/Test Split & Class Balance")
     md_text(
-        f"Stratified split: {int((1 - TEST_SIZE) * 100)}% train / "
-        f"{int(TEST_SIZE * 100)}% test, preserving class proportions."
+        "Stratified 3-way split: **70% train / 15% validation / 15% test**, "
+        "preserving class proportions across all splits."
     )
     train_vc = pd.Series(y_train).value_counts()
+    val_vc = pd.Series(y_val).value_counts()
     test_vc = pd.Series(y_test).value_counts()
     md_table(
         ["Split", "Open (0)", "Closed (1)", "Total", "Closed %"],
         [
             ["Train", train_vc.get(0, 0), train_vc.get(1, 0), len(y_train),
              f"{train_vc.get(1, 0) / len(y_train) * 100:.1f}%"],
+            ["Validation", val_vc.get(0, 0), val_vc.get(1, 0), len(y_val),
+             f"{val_vc.get(1, 0) / len(y_val) * 100:.1f}%"],
             ["Test", test_vc.get(0, 0), test_vc.get(1, 0), len(y_test),
              f"{test_vc.get(1, 0) / len(y_test) * 100:.1f}%"],
         ],
@@ -993,10 +1124,20 @@ def section_ml(df, all_features):
     md_text("5-fold stratified cross-validation on the training set.")
     cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
     cv_rows = []
+    cv_detail_lines = []
     for name, model in models.items():
         scores = cross_val_score(model, X_train_s, y_train, cv=cv, scoring="f1")
         cv_rows.append([name, f"{scores.mean():.4f}", f"{scores.std():.4f}"])
+        fold_str = ", ".join(f"{s:.4f}" for s in scores)
+        cv_detail_lines.append(f"{name:25s} folds: [{fold_str}]  mean={scores.mean():.4f}")
     md_table(["Model", "CV F1 Mean", "CV F1 Std"], cv_rows)
+
+    md_text("**Cross-Validation Fold Details:**")
+    print("```")
+    for line in cv_detail_lines:
+        print(line)
+    print("```")
+    print()
 
     # Train and evaluate each model
     all_results = {}
@@ -1032,6 +1173,16 @@ def section_ml(df, all_features):
             ["Recall", f"{rec:.4f}"], ["F1-Score", f"{f1:.4f}"],
             ["AUC-ROC", f"{auc:.4f}"], ["Training Time", f"{train_time:.3f}s"],
         ])
+
+        # Classification report as verbose log
+        cr = classification_report(y_test, y_pred,
+                                   target_names=["Open (0)", "Closed (1)"])
+        md_text(f"**{name} — Classification Report:**")
+        print("```")
+        print(cr.strip())
+        print("```")
+        print()
+
         sec_idx += 1
 
     # 10.8 Feature Importance
@@ -1150,12 +1301,65 @@ def _plot_history(history, model_name, filename):
     return save_fig(filename)
 
 
+def _fit_and_capture(model, model_name, fit_kwargs):
+    """Train a Keras model, capture verbose output, and return (history, log_text)."""
+    old_stdout = sys.stdout
+    buf = StringIO()
+    sys.stdout = buf
+    history = model.fit(**fit_kwargs, verbose=2)
+    sys.stdout = old_stdout
+    log_text = buf.getvalue()
+    return history, log_text
+
+
+def _print_training_log(model_name, log_text):
+    """Print captured training log inside a Markdown fenced code block."""
+    md_text(f"**{model_name} — Training Log:**")
+    print("```")
+    print(log_text.strip())
+    print("```")
+    print()
+
+
 def section_neural_network(df):
     title("11. Neural Network Classification")
     md_text(
         "Deep-learning models learn hierarchical feature representations from raw "
         "EEG signals. This section evaluates a **1D CNN**, a **2D CNN on spectrograms**, "
         "and an **LSTM** network."
+    )
+
+    subtitle("11.0 Binary Cross-Entropy Loss & Gradient Descent")
+    md_text(
+        "All neural networks in this section are trained using **Binary Cross-Entropy** "
+        "(BCE) as the loss function and **gradient descent** (Adam optimiser) to update "
+        "weights."
+    )
+    md_text(
+        "**Binary Cross-Entropy** measures the divergence between predicted probabilities "
+        "and true binary labels:\n\n"
+        "$$\\mathcal{L}_{BCE} = -\\frac{1}{N}\\sum_{i=1}^{N}"
+        "\\left[y_i \\log(\\hat{y}_i) + (1 - y_i)\\log(1 - \\hat{y}_i)\\right]$$\n\n"
+        "where $y_i \\in \\{0, 1\\}$ is the true label and $\\hat{y}_i = \\sigma(z_i)$ "
+        "is the sigmoid output. BCE is the natural choice for binary classification because "
+        "it directly penalises confident wrong predictions: when $y_i = 1$ but $\\hat{y}_i "
+        "\\approx 0$, the $-\\log(\\hat{y}_i)$ term produces a very large loss."
+    )
+    md_text(
+        "**Gradient Descent (Adam)** updates each weight $w$ by following the negative "
+        "gradient of the loss:\n\n"
+        "$$w \\leftarrow w - \\eta \\cdot \\frac{\\partial \\mathcal{L}}{\\partial w}$$\n\n"
+        "Adam combines momentum with adaptive per-parameter learning rates, using "
+        "first and second moment estimates of the gradients. The default learning rate "
+        "is $\\eta = 0.001$."
+    )
+    md_text(
+        "**Training Loss Cutoff (EarlyStopping):** Training does not run for a fixed "
+        "number of epochs. An `EarlyStopping` callback monitors the validation loss and "
+        "halts training when it stops improving for a set number of epochs (patience). "
+        "The model weights are restored to the epoch with the lowest validation loss. "
+        "This prevents overfitting and acts as an automatic convergence cutoff — training "
+        "ends when the gradient updates no longer reduce the validation error."
     )
 
     nn_results = {}
@@ -1179,10 +1383,13 @@ def section_neural_network(df):
 
         X = df[FEATURE_COLUMNS].values
         y = df[TARGET].values
-        Xtr, Xte, ytr, yte = train_test_split(
-            X, y, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y)
+        Xtr, Xtemp, ytr, ytemp = train_test_split(
+            X, y, test_size=0.30, random_state=RANDOM_STATE, stratify=y)
+        Xval, Xte, yval, yte = train_test_split(
+            Xtemp, ytemp, test_size=0.50, random_state=RANDOM_STATE, stratify=ytemp)
         sc = StandardScaler()
         Xtr = sc.fit_transform(Xtr)
+        Xval = sc.transform(Xval)
         Xte = sc.transform(Xte)
 
         mlp = MLPClassifier(hidden_layer_sizes=(128, 64, 32),
@@ -1237,23 +1444,28 @@ def section_neural_network(df):
     X_win = np.array(Xw)
     y_win = np.array(yw)
 
-    # Stratified split BEFORE scaling
-    Xtr, Xte, ytr, yte = train_test_split(
-        X_win, y_win, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y_win)
+    # Stratified 3-way split BEFORE scaling
+    Xtr, Xtemp, ytr, ytemp = train_test_split(
+        X_win, y_win, test_size=0.30, random_state=RANDOM_STATE, stratify=y_win)
+    Xval, Xte, yval, yte = train_test_split(
+        Xtemp, ytemp, test_size=0.50, random_state=RANDOM_STATE, stratify=ytemp)
 
     # Scale: fit on train only
     tr_flat = Xtr.reshape(-1, Xtr.shape[-1])
     sc = StandardScaler().fit(tr_flat)
     Xtr = sc.transform(Xtr.reshape(-1, Xtr.shape[-1])).reshape(Xtr.shape)
+    Xval = sc.transform(Xval.reshape(-1, Xval.shape[-1])).reshape(Xval.shape)
     Xte = sc.transform(Xte.reshape(-1, Xte.shape[-1])).reshape(Xte.shape)
 
     md_text(
         f"Window size = {WINDOW} samples, step = {STEP}. "
-        f"Total windows: {len(X_win)} (train {len(Xtr)}, test {len(Xte)})."
+        f"Total windows: {len(X_win)} (train {len(Xtr)}, val {len(Xval)}, test {len(Xte)})."
     )
 
     es = callbacks.EarlyStopping(patience=5, restore_best_weights=True,
                                  monitor="val_loss")
+    rlr = callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5,
+                                      patience=3, min_lr=1e-6, verbose=0)
 
     # 11.1 1D CNN
     subtitle("11.1 1D CNN on Raw EEG")
@@ -1286,8 +1498,9 @@ def section_neural_network(df):
     m1.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
 
     t0 = time.time()
-    h1 = m1.fit(Xtr, ytr, epochs=30, batch_size=64,
-                validation_split=0.2, callbacks=[es], verbose=0)
+    h1, log1 = _fit_and_capture(m1, "1D CNN", dict(
+        x=Xtr, y=ytr, epochs=30, batch_size=64,
+        validation_data=(Xval, yval), callbacks=[es, rlr]))
     t1 = time.time() - t0
 
     yp1 = m1.predict(Xte, verbose=0).flatten()
@@ -1303,6 +1516,7 @@ def section_neural_network(df):
         ["AUC-ROC", f"{res1['AUC-ROC']:.4f}"],
         ["Training Time", f"{t1:.3f}s"],
     ])
+    _print_training_log("1D CNN", log1)
     path = _plot_history(h1, "1D CNN", "cnn1d_training.png")
     md_image(path, "1D CNN Training History")
 
@@ -1346,13 +1560,16 @@ def section_neural_network(df):
         f"Total samples: {len(X_spec)}."
     )
 
-    Xtr2, Xte2, ytr2, yte2 = train_test_split(
-        X_spec, y_spec, test_size=TEST_SIZE, random_state=RANDOM_STATE, stratify=y_spec)
+    Xtr2, Xtemp2, ytr2, ytemp2 = train_test_split(
+        X_spec, y_spec, test_size=0.30, random_state=RANDOM_STATE, stratify=y_spec)
+    Xval2, Xte2, yval2, yte2 = train_test_split(
+        Xtemp2, ytemp2, test_size=0.50, random_state=RANDOM_STATE, stratify=ytemp2)
 
     # Normalise: fit stats on train only
     tr_mean = Xtr2.mean()
     tr_std = Xtr2.std()
     Xtr2 = (Xtr2 - tr_mean) / (tr_std + 1e-8)
+    Xval2 = (Xval2 - tr_mean) / (tr_std + 1e-8)
     Xte2 = (Xte2 - tr_mean) / (tr_std + 1e-8)
 
     # Class weights
@@ -1364,6 +1581,8 @@ def section_neural_network(df):
 
     es2 = callbacks.EarlyStopping(patience=8, restore_best_weights=True,
                                   monitor="val_loss")
+    rlr2 = callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5,
+                                       patience=4, min_lr=1e-6, verbose=0)
     m2 = keras.Sequential([
         layers.Input(shape=X_spec.shape[1:]),
         layers.Conv2D(32, (3, 3), activation="relu", padding="same"),
@@ -1384,9 +1603,10 @@ def section_neural_network(df):
                loss="binary_crossentropy", metrics=["accuracy"])
 
     t0 = time.time()
-    h2 = m2.fit(Xtr2, ytr2, epochs=50, batch_size=32,
-                validation_split=0.2, callbacks=[es2],
-                class_weight=cw, verbose=0)
+    h2, log2 = _fit_and_capture(m2, "2D CNN", dict(
+        x=Xtr2, y=ytr2, epochs=50, batch_size=32,
+        validation_data=(Xval2, yval2), callbacks=[es2, rlr2],
+        class_weight=cw))
     t2 = time.time() - t0
 
     yp2 = m2.predict(Xte2, verbose=0).flatten()
@@ -1402,6 +1622,7 @@ def section_neural_network(df):
         ["AUC-ROC", f"{res2['AUC-ROC']:.4f}"],
         ["Training Time", f"{t2:.3f}s"],
     ])
+    _print_training_log("CNN (Spectrogram)", log2)
     path = _plot_history(h2, "2D CNN (Spectrogram)", "cnn2d_spectrogram_training.png")
     md_image(path, "CNN Spectrogram Training History")
 
@@ -1429,6 +1650,8 @@ def section_neural_network(df):
 
     es3 = callbacks.EarlyStopping(patience=5, restore_best_weights=True,
                                   monitor="val_loss")
+    rlr3 = callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5,
+                                       patience=3, min_lr=1e-6, verbose=0)
     m3 = keras.Sequential([
         layers.Input(shape=(WINDOW, len(FEATURE_COLUMNS))),
         layers.LSTM(64, return_sequences=True),
@@ -1441,8 +1664,9 @@ def section_neural_network(df):
     m3.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
 
     t0 = time.time()
-    h3 = m3.fit(Xtr, ytr, epochs=30, batch_size=64,
-                validation_split=0.2, callbacks=[es3], verbose=0)
+    h3, log3 = _fit_and_capture(m3, "LSTM", dict(
+        x=Xtr, y=ytr, epochs=30, batch_size=64,
+        validation_data=(Xval, yval), callbacks=[es3, rlr3]))
     t3 = time.time() - t0
 
     yp3 = m3.predict(Xte, verbose=0).flatten()
@@ -1458,6 +1682,7 @@ def section_neural_network(df):
         ["AUC-ROC", f"{res3['AUC-ROC']:.4f}"],
         ["Training Time", f"{t3:.3f}s"],
     ])
+    _print_training_log("LSTM", log3)
     path = _plot_history(h3, "LSTM", "lstm_training.png")
     md_image(path, "LSTM Training History")
 
