@@ -60,25 +60,30 @@ cells.append(md(
     "# EEG Eye State Classification — Complete Analysis Pipeline\n\n"
     "**Dataset:** [UCI Machine Learning Repository — EEG Eye State]"
     "(https://archive.ics.uci.edu/dataset/264/eeg+eye+state)\n\n"
-    "Notebook version of `script.py`. Each section is executed below with inline output."
+    "Notebook version of `script.py`. Each section is executed below with inline output.\n\n"
+    "**Upgrades:** Bandpass filter (0.5–45 Hz), ICA artifact removal, "
+    "frequency band power features, Pipeline-wrapped ML models, temporal EDA plots."
 ))
 
-# ========== Cell 2: Imports (lines 1-52, modified) ==========
+# ========== Cell 2: Imports (lines 1-67, modified) ==========
 import_block = ['%matplotlib inline\n']
-for line in get(1, 53):
+for line in get(1, 68):
     if 'matplotlib.use' in line:
+        continue
+    if 'import argparse' in line:
         continue
     import_block.append(line)
 import_block.append('\n')
 import_block.append('print("Imports loaded.")\n')
 import_block.append('print(f"TensorFlow: {HAS_TF}")\n')
 import_block.append('print(f"UMAP: {HAS_UMAP}")\n')
+import_block.append('print(f"MNE: {HAS_MNE}")\n')
 cells.append(code(import_block))
 
-# ========== Cell 3: Configuration (lines 56-101, skip stdout reconfigure) ==========
+# ========== Cell 3: Configuration (lines 69-130, skip stdout reconfigure) ==========
 config_block = []
 skip_next = False
-for line in get(56, 102):
+for line in get(69, 131):
     if 'hasattr(sys.stdout' in line:
         skip_next = True
         continue
@@ -88,9 +93,9 @@ for line in get(56, 102):
     config_block.append(line)
 cells.append(code(config_block))
 
-# ========== Cell 4: Helper functions (lines 107-139, modified save_fig) ==========
+# ========== Cell 4: Helper functions (lines 135-166, modified save_fig) ==========
 helper_block = []
-for line in get(107, 140):
+for line in get(135, 167):
     if line.strip() == 'plt.close("all")':
         helper_block.append('    plt.show()\n')
     helper_block.append(line)
@@ -99,43 +104,43 @@ cells.append(code(helper_block))
 # ========== Section cells: define function + call ==========
 sections = [
     # (title, func_start, func_end, execution_code)
-    ("Table of Contents", 144, 218,
+    ("Table of Contents", 168, 248,
      "print_toc()"),
 
-    ("1. Data Description", 218, 316,
+    ("1. Data Description", 248, 348,
      "df = pd.read_csv(DATA_FILE)\nprint(f'Loaded {len(df)} samples')\nsection_data_description(df)"),
 
-    ("2. Data Imputation", 316, 343,
+    ("2. Data Imputation", 348, 375,
      "df = section_data_imputation(df)"),
 
-    ("3. Data Visualization (Raw)", 343, 433,
+    ("3. Data Visualization (Raw)", 375, 517,
      "section_data_viz_raw(df)"),
 
-    ("4. Outlier Removal", 433, 495,
+    ("4. Signal Preprocessing (Bandpass + ICA)", 517, 734,
      "df_raw_copy = df.copy()\ndf_clean = section_outlier_removal(df)"),
 
-    ("5. Data Visualization (Cleaned)", 495, 534,
+    ("5. Data Visualization (Cleaned)", 734, 773,
      "section_data_viz_cleaned(df_raw_copy, df_clean)"),
 
-    ("6. Log-Normalization Assessment", 534, 645,
+    ("6. Log-Normalization Assessment", 773, 884,
      "section_log_normalization(df_clean)"),
 
-    ("7. Feature Engineering", 645, 741,
+    ("7. Feature Engineering", 884, 1025,
      "df_eng, all_features = section_feature_engineering(df_clean)"),
 
-    ("8. FFT, PSD & Spectrograms", 741, 861,
+    ("8. FFT, PSD & Spectrograms", 1025, 1145,
      "section_fft_psd_spectro(df_clean)"),
 
-    ("9. Dimensionality Reduction", 861, 1085,
+    ("9. Dimensionality Reduction", 1145, 1369,
      "section_dim_reduction(df_eng, all_features)"),
 
-    ("10. ML Classification", 1085, 1377,
+    ("10. ML Classification (Pipeline-based)", 1369, 1676,
      "ml_results = section_ml(df_eng, all_features)"),
 
-    ("11. Neural Network Classification", 1377, 1881,
+    ("11. Neural Network Classification", 1676, 2180,
      "nn_results = section_neural_network(df_clean)"),
 
-    ("12. Final Comparison", 1881, 1989,
+    ("12. Final Comparison", 2180, 2288,
      "section_final_comparison(ml_results, nn_results)"),
 ]
 

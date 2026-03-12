@@ -1,0 +1,52 @@
+# ============================================================================
+# EEG Eye State Classification — Pipeline Configuration
+# ============================================================================
+
+paths:
+  data_file: "dataset/eeg_data_og.csv"
+  plot_dir: "analysis-plots"
+
+data:
+  sampling_rate: 128
+  random_state: 42
+  test_size: 0.30
+
+preprocessing:
+  bandpass:
+    lowcut: 0.5
+    highcut: 45.0
+    order: 4
+  ica:
+    n_components: 14
+    kurtosis_threshold: 5.0
+  iqr:
+    multiplier: 3.0       # safety-net IQR (wider than old 1.5x)
+    max_passes: 3
+
+features:
+  asymmetry: true
+  band_powers: true
+  global_stats: true
+
+models:
+  ml:
+    - logistic_regression
+    - knn
+    - svm
+    - random_forest
+    - gradient_boosting
+  nn:
+    - cnn1d
+    - cnn2d_spectrogram
+    - lstm
+  nn_window: 64
+  nn_step: 4
+
+sections:
+  - eda
+  - preprocessing
+  - features
+  - dimreduction
+  - ml
+  - nn
+  - comparison
