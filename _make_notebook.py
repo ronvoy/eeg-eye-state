@@ -113,34 +113,34 @@ sections = [
     ("2. Data Imputation", 348, 375,
      "df = section_data_imputation(df)"),
 
-    ("3. Data Visualization (Raw)", 375, 517,
+    ("3. Data Visualization (Raw)", 375, 534,
      "section_data_viz_raw(df)"),
 
-    ("4. Signal Preprocessing (Bandpass + ICA)", 517, 734,
+    ("4. Signal Preprocessing (Bandpass + ICA)", 534, 751,
      "df_raw_copy = df.copy()\ndf_clean = section_outlier_removal(df)"),
 
-    ("5. Data Visualization (Cleaned)", 734, 773,
+    ("5. Data Visualization (After Preprocessing)", 751, 794,
      "section_data_viz_cleaned(df_raw_copy, df_clean)"),
 
-    ("6. Log-Normalization Assessment", 773, 884,
+    ("6. Log-Normalization Assessment", 794, 905,
      "section_log_normalization(df_clean)"),
 
-    ("7. Feature Engineering", 884, 1025,
+    ("7. Feature Engineering", 905, 1046,
      "df_eng, all_features = section_feature_engineering(df_clean)"),
 
-    ("8. FFT, PSD & Spectrograms", 1025, 1145,
+    ("8. FFT, PSD & Spectrograms", 1046, 1166,
      "section_fft_psd_spectro(df_clean)"),
 
-    ("9. Dimensionality Reduction", 1145, 1369,
+    ("9. Dimensionality Reduction", 1166, 1390,
      "section_dim_reduction(df_eng, all_features)"),
 
-    ("10. ML Classification (Pipeline-based)", 1369, 1676,
+    ("10. ML Classification (Pipeline-based)", 1390, 1697,
      "ml_results = section_ml(df_eng, all_features)"),
 
-    ("11. Neural Network Classification", 1676, 2180,
+    ("11. Neural Network Classification", 1697, 2200,
      "nn_results = section_neural_network(df_clean)"),
 
-    ("12. Final Comparison", 2180, 2288,
+    ("12. Final Comparison", 2200, 2310,
      "section_final_comparison(ml_results, nn_results)"),
 ]
 

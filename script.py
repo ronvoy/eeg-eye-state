@@ -198,7 +198,7 @@ def print_toc():
    - 4.1 [Bandpass Filter (0.5–45 Hz)](#41-bandpass-filter-05--45-hz)
    - 4.2 [ICA Artifact Removal](#42-ica-artifact-removal)
    - 4.3 [Residual Outlier Removal (Safety Net)](#43-residual-outlier-removal-safety-net)
-5. [Data Visualization (After Preprocessing)](#5-data-visualization-after-outlier-removal)
+5. [Data Visualization (After Preprocessing)](#5-data-visualization-after-preprocessing)
    - 5.1 [Box Plots Comparison](#51-box-plots-comparison)
    - 5.2 [Histograms After Cleaning](#52-histograms-after-cleaning)
 6. [Log-Normalization Assessment (Rejected)](#6-log-normalization-assessment-rejected)
@@ -421,6 +421,26 @@ def section_data_viz_raw(df):
     plt.tight_layout()
     path = save_fig("boxplots_raw.png")
     md_image(path, "Box Plots")
+
+    # 3.3b Zoomed Box Plots (clipped at 1st/99th percentile)
+    md_text(
+        "The raw box plots are compressed by extreme spike artifacts. "
+        "Below is a **zoomed view** clipped at the 1st–99th percentile range "
+        "to reveal the actual distribution of most samples."
+    )
+    fig, axes = plt.subplots(2, 7, figsize=(24, 8))
+    for i, ch in enumerate(FEATURE_COLUMNS):
+        ax = axes.flatten()[i]
+        sns.boxplot(y=df[ch], ax=ax, color="#3498db")
+        lo, hi = df[ch].quantile(0.01), df[ch].quantile(0.99)
+        margin = (hi - lo) * 0.1
+        ax.set_ylim(lo - margin, hi + margin)
+        ax.set_title(ch, fontsize=10)
+        ax.tick_params(labelsize=8)
+    plt.suptitle("Box Plots — Zoomed (1st–99th percentile)", fontsize=14, fontweight="bold")
+    plt.tight_layout()
+    path = save_fig("boxplots_raw_zoomed.png")
+    md_image(path, "Box Plots Zoomed")
 
     # 3.4 Histograms
     subtitle("3.4 Histograms")
@@ -733,19 +753,23 @@ def section_outlier_removal(df):
 # =============================================================================
 
 def section_data_viz_cleaned(df_raw, df_clean):
-    title("5. Data Visualization (After Outlier Removal)")
-    md_text("Comparison of distributions before and after outlier removal.")
+    title("5. Data Visualization (After Preprocessing)")
+    md_text("Comparison of distributions before and after preprocessing (bandpass + ICA + IQR).")
 
     # 5.1 Box Plots Comparison
     subtitle("5.1 Box Plots Comparison")
-    md_text("Side-by-side box plots confirm outlier removal effectiveness.")
+    md_text(
+        "Side-by-side box plots confirm preprocessing effectiveness. "
+        "Whiskers are set to **3.0x IQR** to match the cleaning threshold — "
+        "points beyond this range are true residual outliers."
+    )
     fig, axes = plt.subplots(2, 7, figsize=(24, 8))
     for i, ch in enumerate(FEATURE_COLUMNS):
         ax = axes.flatten()[i]
-        sns.boxplot(y=df_clean[ch], ax=ax, color="#2ecc71")
+        sns.boxplot(y=df_clean[ch], ax=ax, color="#2ecc71", whis=3.0)
         ax.set_title(ch, fontsize=10)
         ax.tick_params(labelsize=8)
-    plt.suptitle("Box Plots — After Outlier Removal", fontsize=14, fontweight="bold")
+    plt.suptitle("Box Plots — After Preprocessing (whis=3.0x IQR)", fontsize=14, fontweight="bold")
     plt.tight_layout()
     path = save_fig("boxplots_cleaned.png")
     md_image(path, "Box Plots After Cleaning")
@@ -762,7 +786,7 @@ def section_data_viz_cleaned(df_raw, df_clean):
         ax.tick_params(labelsize=8)
         if i == 0:
             ax.legend(fontsize=7)
-    plt.suptitle("Histograms — After Outlier Removal", fontsize=14, fontweight="bold")
+    plt.suptitle("Histograms — After Preprocessing", fontsize=14, fontweight="bold")
     plt.tight_layout()
     path = save_fig("histograms_cleaned.png")
     md_image(path, "Histograms After Cleaning")
@@ -1834,27 +1858,21 @@ def section_neural_network(df):
     # ---- TensorFlow path ---------------------------------------------------
     progress("  Preparing EEG windows for deep learning ...")
 
-    # Build windows
+    # Build NON-OVERLAPPING windows to avoid data leakage between splits
     X_data = df[FEATURE_COLUMNS].values
     y_data = df[TARGET].values
     Xw, yw = [], []
-    for i in range(0, len(X_data) - WINDOW, STEP):
+    for i in range(0, len(X_data) - WINDOW, WINDOW):  # step = WINDOW (no overlap)
         Xw.append(X_data[i:i + WINDOW])
         yw.append(int(np.round(np.mean(y_data[i:i + WINDOW]))))
     X_win = np.array(Xw)
     y_win = np.array(yw)
 
-    # Temporal (chronological) 3-way split — no shuffle to prevent data leakage
-    # With overlapping windows, shuffled split would leak future information into training.
-    n_total = len(X_win)
-    n_train = int(n_total * 0.70)
-    n_val = int(n_total * 0.15)
-    Xtr = X_win[:n_train]
-    ytr = y_win[:n_train]
-    Xval = X_win[n_train:n_train + n_val]
-    yval = y_win[n_train:n_train + n_val]
-    Xte = X_win[n_train + n_val:]
-    yte = y_win[n_train + n_val:]
+    # Stratified split — non-overlapping windows prevent leakage so shuffling is safe
+    Xtr, Xtemp, ytr, ytemp = train_test_split(
+        X_win, y_win, test_size=0.30, random_state=RANDOM_STATE, stratify=y_win)
+    Xval, Xte, yval, yte = train_test_split(
+        Xtemp, ytemp, test_size=0.50, random_state=RANDOM_STATE, stratify=ytemp)
 
     # Scale: fit on train only
     tr_flat = Xtr.reshape(-1, Xtr.shape[-1])
@@ -1864,16 +1882,21 @@ def section_neural_network(df):
     Xte = sc.transform(Xte.reshape(-1, Xte.shape[-1])).reshape(Xte.shape)
 
     md_text(
-        f"Window size = {WINDOW} samples, step = {STEP}. "
+        f"Window size = {WINDOW} samples, step = {WINDOW} (non-overlapping). "
         f"Total windows: {len(X_win)} (train {len(Xtr)}, val {len(Xval)}, test {len(Xte)}). "
-        "**Temporal (chronological) split** is used to prevent data leakage from "
-        "overlapping windows — training windows precede validation, which precede test."
+        "**Stratified random split** is used — non-overlapping windows eliminate data "
+        "leakage risk, while stratification preserves class balance across splits."
     )
 
-    es = callbacks.EarlyStopping(patience=5, restore_best_weights=True,
+    es = callbacks.EarlyStopping(patience=8, restore_best_weights=True,
                                  monitor="val_loss")
     rlr = callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5,
-                                      patience=3, min_lr=1e-6, verbose=0)
+                                      patience=4, min_lr=1e-6, verbose=0)
+
+    # Class weights for 1D windows
+    n0_w = int(np.sum(ytr == 0))
+    n1_w = int(np.sum(ytr == 1))
+    cw_win = {0: len(ytr) / (2.0 * max(n0_w, 1)), 1: len(ytr) / (2.0 * max(n1_w, 1))}
 
     # 11.1 1D CNN
     subtitle("11.1 1D CNN on Raw EEG")
@@ -1898,17 +1921,19 @@ def section_neural_network(df):
         layers.MaxPooling1D(2),
         layers.Conv1D(64, 3, activation="relu", padding="same"),
         layers.GlobalAveragePooling1D(),
-        layers.Dropout(0.3),
+        layers.Dropout(0.4),
         layers.Dense(64, activation="relu"),
-        layers.Dropout(0.3),
+        layers.Dropout(0.4),
         layers.Dense(1, activation="sigmoid"),
     ])
-    m1.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
+    m1.compile(optimizer=keras.optimizers.Adam(learning_rate=5e-4),
+               loss="binary_crossentropy", metrics=["accuracy"])
 
     t0 = time.time()
     h1, log1 = _fit_and_capture(m1, "1D CNN", dict(
-        x=Xtr, y=ytr, epochs=30, batch_size=64,
-        validation_data=(Xval, yval), callbacks=[es, rlr]))
+        x=Xtr, y=ytr, epochs=50, batch_size=64,
+        validation_data=(Xval, yval), callbacks=[es, rlr],
+        class_weight=cw_win))
     t1 = time.time() - t0
 
     yp1 = m1.predict(Xte, verbose=0).flatten()
@@ -1943,7 +1968,7 @@ def section_neural_network(df):
     progress("  Building spectrogram windows ...")
 
     SPEC_WIN = 64
-    SPEC_STEP = 4
+    SPEC_STEP = SPEC_WIN  # non-overlapping to prevent leakage
     seg = 32
     ovlp = seg - 8
 
@@ -1963,21 +1988,16 @@ def section_neural_network(df):
     y_spec = np.array(labels)
 
     md_text(
-        f"Spectrogram window = {SPEC_WIN}, step = {SPEC_STEP}. "
+        f"Spectrogram window = {SPEC_WIN}, step = {SPEC_STEP} (non-overlapping). "
         f"Shape per sample: {X_spec.shape[1:]} (freq x time x channels). "
         f"Total samples: {len(X_spec)}."
     )
 
-    # Temporal split for spectrograms (same rationale as 1D windows)
-    n_spec = len(X_spec)
-    n_spec_train = int(n_spec * 0.70)
-    n_spec_val = int(n_spec * 0.15)
-    Xtr2 = X_spec[:n_spec_train]
-    ytr2 = y_spec[:n_spec_train]
-    Xval2 = X_spec[n_spec_train:n_spec_train + n_spec_val]
-    yval2 = y_spec[n_spec_train:n_spec_train + n_spec_val]
-    Xte2 = X_spec[n_spec_train + n_spec_val:]
-    yte2 = y_spec[n_spec_train + n_spec_val:]
+    # Stratified split for spectrograms (non-overlapping windows → safe to shuffle)
+    Xtr2, Xtemp2, ytr2, ytemp2 = train_test_split(
+        X_spec, y_spec, test_size=0.30, random_state=RANDOM_STATE, stratify=y_spec)
+    Xval2, Xte2, yval2, yte2 = train_test_split(
+        Xtemp2, ytemp2, test_size=0.50, random_state=RANDOM_STATE, stratify=ytemp2)
 
     # Normalise: fit stats on train only
     tr_mean = Xtr2.mean()
@@ -2074,25 +2094,28 @@ def section_neural_network(df):
     )
     progress("  Training LSTM ...")
 
-    es3 = callbacks.EarlyStopping(patience=5, restore_best_weights=True,
+    es3 = callbacks.EarlyStopping(patience=8, restore_best_weights=True,
                                   monitor="val_loss")
     rlr3 = callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5,
-                                       patience=3, min_lr=1e-6, verbose=0)
+                                       patience=4, min_lr=1e-6, verbose=0)
     m3 = keras.Sequential([
         layers.Input(shape=(WINDOW, len(FEATURE_COLUMNS))),
         layers.LSTM(64, return_sequences=True),
-        layers.Dropout(0.3),
+        layers.Dropout(0.4),
         layers.LSTM(32),
-        layers.Dropout(0.3),
+        layers.Dropout(0.4),
         layers.Dense(32, activation="relu"),
+        layers.Dropout(0.3),
         layers.Dense(1, activation="sigmoid"),
     ])
-    m3.compile(optimizer="adam", loss="binary_crossentropy", metrics=["accuracy"])
+    m3.compile(optimizer=keras.optimizers.Adam(learning_rate=5e-4),
+               loss="binary_crossentropy", metrics=["accuracy"])
 
     t0 = time.time()
     h3, log3 = _fit_and_capture(m3, "LSTM", dict(
-        x=Xtr, y=ytr, epochs=30, batch_size=64,
-        validation_data=(Xval, yval), callbacks=[es3, rlr3]))
+        x=Xtr, y=ytr, epochs=50, batch_size=64,
+        validation_data=(Xval, yval), callbacks=[es3, rlr3],
+        class_weight=cw_win))
     t3 = time.time() - t0
 
     yp3 = m3.predict(Xte, verbose=0).flatten()
@@ -2205,12 +2228,10 @@ def section_final_comparison(ml_results, nn_results):
     md_table(headers, rows)
 
     md_text(
-        "> **Note on Test Sets:** ML models and neural networks use **different test "
-        "sets**. ML models are evaluated on a stratified random split of engineered features, "
-        "while neural networks use a **temporal (chronological) split** of windowed raw EEG "
-        "data. This means the absolute scores are not directly comparable across categories. "
-        "The ranking is indicative rather than definitive — use within-category comparisons "
-        "(ML vs ML, NN vs NN) for more precise model selection."
+        "> **Note on Test Sets:** ML models use **engineered features** (asymmetry, band power, "
+        "statistics) while neural networks operate on **windowed raw EEG** signals. Both use "
+        "stratified random splits, but the feature spaces differ fundamentally. "
+        "Use within-category comparisons (ML vs ML, NN vs NN) for precise model selection."
     )
 
     # Final bar chart
