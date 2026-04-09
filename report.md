@@ -637,18 +637,18 @@ Each dimensionality reduction technique has distinct strengths and ideal use-cas
 
 # 10. Machine Learning Classification
 
-Five classical ML algorithms are evaluated using a **55/15/30 stratified train-validation-test split**. Each model is wrapped in a `sklearn.Pipeline` that includes `StandardScaler`, ensuring that scaling is applied correctly during cross-validation (no data leakage) and simplifying deployment.
+Five classical ML algorithms are evaluated using a **80/10/10 stratified train-validation-test split**. Each model is wrapped in a `sklearn.Pipeline` that includes `StandardScaler`, ensuring that scaling is applied correctly during cross-validation (no data leakage) and simplifying deployment.
 
 
 ## 10.1 Train/Validation/Test Split & Class Balance
 
-Stratified 3-way split: **55% train / 15% validation / 30% test**, preserving class proportions across all splits. Each model is wrapped in a `Pipeline(StandardScaler → Classifier)` so scaling is performed correctly inside each CV fold (no data leakage).
+Stratified 3-way split: **80% train / 10% validation / 10% test**, preserving class proportions across all splits. Each model is wrapped in a `Pipeline(StandardScaler → Classifier)` so scaling is performed correctly inside each CV fold (no data leakage).
 
 | Split | Open (0) | Closed (1) | Total | Closed % |
 | --- | --- | --- | --- | --- |
-| Train | 4486 | 3672 | 8158 | 45.0% |
-| Validation | 1223 | 1001 | 2224 | 45.0% |
-| Test | 2447 | 2004 | 4451 | 45.0% |
+| Train | 6525 | 5341 | 11866 | 45.0% |
+| Validation | 815 | 668 | 1483 | 45.0% |
+| Test | 816 | 668 | 1484 | 45.0% |
 
 
 ## 10.2 Cross-Validation Results (5-Fold Stratified)
@@ -657,20 +657,20 @@ Stratified 3-way split: **55% train / 15% validation / 30% test**, preserving cl
 
 | Model | CV F1 Mean | CV F1 Std |
 | --- | --- | --- |
-| Logistic Regression | 0.2125 | 0.0144 |
-| K-Nearest Neighbors | 0.5275 | 0.0090 |
-| Support Vector Machine | 0.4084 | 0.0154 |
-| Random Forest | 0.4851 | 0.0157 |
-| Gradient Boosting | 0.4329 | 0.0154 |
+| Logistic Regression | 0.1845 | 0.0098 |
+| K-Nearest Neighbors | 0.5237 | 0.0075 |
+| Support Vector Machine | 0.4220 | 0.0244 |
+| Random Forest | 0.5113 | 0.0154 |
+| Gradient Boosting | 0.4276 | 0.0218 |
 
 **Cross-Validation Fold Details:**
 
 ```
-Logistic Regression       folds: [0.2037, 0.1946, 0.2155, 0.2110, 0.2376]  mean=0.2125
-K-Nearest Neighbors       folds: [0.5362, 0.5364, 0.5135, 0.5308, 0.5206]  mean=0.5275
-Support Vector Machine    folds: [0.4187, 0.3952, 0.3850, 0.4183, 0.4246]  mean=0.4084
-Random Forest             folds: [0.4963, 0.4732, 0.4600, 0.4963, 0.4996]  mean=0.4851
-Gradient Boosting         folds: [0.4294, 0.4174, 0.4192, 0.4593, 0.4392]  mean=0.4329
+Logistic Regression       folds: [0.1717, 0.1755, 0.1880, 0.1879, 0.1991]  mean=0.1845
+K-Nearest Neighbors       folds: [0.5310, 0.5329, 0.5222, 0.5200, 0.5126]  mean=0.5237
+Support Vector Machine    folds: [0.3969, 0.4525, 0.4497, 0.4121, 0.3987]  mean=0.4220
+Random Forest             folds: [0.4868, 0.5283, 0.5270, 0.5098, 0.5048]  mean=0.5113
+Gradient Boosting         folds: [0.4000, 0.4523, 0.4401, 0.4427, 0.4029]  mean=0.4276
 ```
 
 
@@ -688,12 +688,12 @@ It serves as an interpretable linear baseline for binary classification.
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.5468 |
-| Precision | 0.4872 |
-| Recall | 0.1233 |
-| F1-Score | 0.1967 |
-| AUC-ROC | 0.5332 |
-| Val F1-Score | 0.2052 |
+| Accuracy | 0.5431 |
+| Precision | 0.4667 |
+| Recall | 0.1048 |
+| F1-Score | 0.1711 |
+| AUC-ROC | 0.5193 |
+| Val F1-Score | 0.1902 |
 | Training Time | 0.050s |
 
 **Logistic Regression — Classification Report:**
@@ -701,15 +701,15 @@ It serves as an interpretable linear baseline for binary classification.
 ```
 precision    recall  f1-score   support
 
-    Open (0)       0.55      0.89      0.68      2447
-  Closed (1)       0.49      0.12      0.20      2004
+    Open (0)       0.55      0.90      0.68       816
+  Closed (1)       0.47      0.10      0.17       668
 
-    accuracy                           0.55      4451
-   macro avg       0.52      0.51      0.44      4451
-weighted avg       0.52      0.55      0.46      4451
+    accuracy                           0.54      1484
+   macro avg       0.51      0.50      0.43      1484
+weighted avg       0.51      0.54      0.45      1484
 ```
 
-> **Interpretation:** Logistic Regression achieves a modest F1 of 0.1967, underperforming the non-linear models. This is expected: LR can only learn a single linear decision boundary in the feature space. EEG eye-state classification involves complex, non-linear patterns that a hyperplane cannot capture. LR serves its purpose here as a **baseline** to quantify the improvement from non-linear models.
+> **Interpretation:** Logistic Regression achieves a modest F1 of 0.1711, underperforming the non-linear models. This is expected: LR can only learn a single linear decision boundary in the feature space. EEG eye-state classification involves complex, non-linear patterns that a hyperplane cannot capture. LR serves its purpose here as a **baseline** to quantify the improvement from non-linear models.
 
 
 ## 10.4 K-Nearest Neighbors
@@ -726,12 +726,12 @@ KNN is non-parametric, making no distributional assumptions. With $k=5$ and stan
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.5848 |
-| Precision | 0.5423 |
-| Recall | 0.4995 |
-| F1-Score | 0.5200 |
-| AUC-ROC | 0.6156 |
-| Val F1-Score | 0.5431 |
+| Accuracy | 0.6159 |
+| Precision | 0.5790 |
+| Recall | 0.5374 |
+| F1-Score | 0.5575 |
+| AUC-ROC | 0.6489 |
+| Val F1-Score | 0.5562 |
 | Training Time | 0.006s |
 
 **K-Nearest Neighbors — Classification Report:**
@@ -739,12 +739,12 @@ KNN is non-parametric, making no distributional assumptions. With $k=5$ and stan
 ```
 precision    recall  f1-score   support
 
-    Open (0)       0.61      0.65      0.63      2447
-  Closed (1)       0.54      0.50      0.52      2004
+    Open (0)       0.64      0.68      0.66       816
+  Closed (1)       0.58      0.54      0.56       668
 
-    accuracy                           0.58      4451
-   macro avg       0.58      0.58      0.58      4451
-weighted avg       0.58      0.58      0.58      4451
+    accuracy                           0.62      1484
+   macro avg       0.61      0.61      0.61      1484
+weighted avg       0.61      0.62      0.61      1484
 ```
 
 
@@ -762,25 +762,25 @@ The RBF kernel captures non-linear decision boundaries between eye states.
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.6084 |
-| Precision | 0.6350 |
-| Recall | 0.3064 |
-| F1-Score | 0.4133 |
-| AUC-ROC | 0.6335 |
-| Val F1-Score | 0.4212 |
-| Training Time | 28.574s |
+| Accuracy | 0.6287 |
+| Precision | 0.6789 |
+| Recall | 0.3323 |
+| F1-Score | 0.4462 |
+| AUC-ROC | 0.6634 |
+| Val F1-Score | 0.4270 |
+| Training Time | 55.084s |
 
 **Support Vector Machine — Classification Report:**
 
 ```
 precision    recall  f1-score   support
 
-    Open (0)       0.60      0.86      0.71      2447
-  Closed (1)       0.63      0.31      0.41      2004
+    Open (0)       0.61      0.87      0.72       816
+  Closed (1)       0.68      0.33      0.45       668
 
-    accuracy                           0.61      4451
-   macro avg       0.62      0.58      0.56      4451
-weighted avg       0.62      0.61      0.57      4451
+    accuracy                           0.63      1484
+   macro avg       0.65      0.60      0.58      1484
+weighted avg       0.64      0.63      0.60      1484
 ```
 
 
@@ -798,25 +798,25 @@ Bagging reduces variance and random subspace selection decorrelates trees. 200 e
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.6279 |
-| Precision | 0.6255 |
-| Recall | 0.4326 |
-| F1-Score | 0.5115 |
-| AUC-ROC | 0.6691 |
-| Val F1-Score | 0.5168 |
-| Training Time | 5.593s |
+| Accuracy | 0.6395 |
+| Precision | 0.6449 |
+| Recall | 0.4431 |
+| F1-Score | 0.5253 |
+| AUC-ROC | 0.6807 |
+| Val F1-Score | 0.5285 |
+| Training Time | 4.660s |
 
 **Random Forest — Classification Report:**
 
 ```
 precision    recall  f1-score   support
 
-    Open (0)       0.63      0.79      0.70      2447
-  Closed (1)       0.63      0.43      0.51      2004
+    Open (0)       0.64      0.80      0.71       816
+  Closed (1)       0.64      0.44      0.53       668
 
-    accuracy                           0.63      4451
-   macro avg       0.63      0.61      0.61      4451
-weighted avg       0.63      0.63      0.61      4451
+    accuracy                           0.64      1484
+   macro avg       0.64      0.62      0.62      1484
+weighted avg       0.64      0.64      0.63      1484
 ```
 
 
@@ -830,25 +830,25 @@ Each tree $h_m$ is fit to the negative gradient of the loss function. The learni
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.5940 |
-| Precision | 0.5795 |
-| Recall | 0.3583 |
-| F1-Score | 0.4428 |
-| AUC-ROC | 0.6283 |
-| Val F1-Score | 0.4306 |
-| Training Time | 20.798s |
+| Accuracy | 0.5876 |
+| Precision | 0.5686 |
+| Recall | 0.3473 |
+| F1-Score | 0.4312 |
+| AUC-ROC | 0.6211 |
+| Val F1-Score | 0.4345 |
+| Training Time | 30.040s |
 
 **Gradient Boosting — Classification Report:**
 
 ```
 precision    recall  f1-score   support
 
-    Open (0)       0.60      0.79      0.68      2447
-  Closed (1)       0.58      0.36      0.44      2004
+    Open (0)       0.59      0.78      0.68       816
+  Closed (1)       0.57      0.35      0.43       668
 
-    accuracy                           0.59      4451
-   macro avg       0.59      0.57      0.56      4451
-weighted avg       0.59      0.59      0.57      4451
+    accuracy                           0.59      1484
+   macro avg       0.58      0.57      0.55      1484
+weighted avg       0.58      0.59      0.57      1484
 ```
 
 **Validation Set Model Selection:** Based on validation F1-Scores, **K-Nearest Neighbors** is the best-performing model on held-out validation data, confirming it generalises well beyond the training set.
@@ -872,11 +872,11 @@ ROC curves plot True Positive Rate vs False Positive Rate.
 
 | Model | Accuracy | Precision | Recall | F1-Score | AUC-ROC | Time (s) |
 | --- | --- | --- | --- | --- | --- | --- |
-| Logistic Regression | 0.5468 | 0.4872 | 0.1233 | 0.1967 | 0.5332 | 0.050 |
-| K-Nearest Neighbors | 0.5848 | 0.5423 | 0.4995 | 0.5200 | 0.6156 | 0.006 |
-| Support Vector Machine | 0.6084 | 0.6350 | 0.3064 | 0.4133 | 0.6335 | 28.574 |
-| Random Forest | 0.6279 | 0.6255 | 0.4326 | 0.5115 | 0.6691 | 5.593 |
-| Gradient Boosting | 0.5940 | 0.5795 | 0.3583 | 0.4428 | 0.6283 | 20.798 |
+| Logistic Regression | 0.5431 | 0.4667 | 0.1048 | 0.1711 | 0.5193 | 0.050 |
+| K-Nearest Neighbors | 0.6159 | 0.5790 | 0.5374 | 0.5575 | 0.6489 | 0.006 |
+| Support Vector Machine | 0.6287 | 0.6789 | 0.3323 | 0.4462 | 0.6634 | 55.084 |
+| Random Forest | 0.6395 | 0.6449 | 0.4431 | 0.5253 | 0.6807 | 4.660 |
+| Gradient Boosting | 0.5876 | 0.5686 | 0.3473 | 0.4312 | 0.6211 | 30.040 |
 
 ![ML Confusion Matrices](analysis-plots/ml_confusion_matrices.png)
 
@@ -921,12 +921,12 @@ with output $\hat{y} = \sigma(\mathbf{w}^T \mathbf{h}^{(L)} + b)$.
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.5571 |
-| Precision | 0.5455 |
-| Recall | 0.1875 |
-| F1-Score | 0.2791 |
-| AUC-ROC | 0.4918 |
-| Training Time | 0.071s |
+| Accuracy | 0.4167 |
+| Precision | 0.0000 |
+| Recall | 0.0000 |
+| F1-Score | 0.0000 |
+| AUC-ROC | 0.5245 |
+| Training Time | 0.077s |
 | Window size | 64 samples (0.5 s) |
 | Total windows | 231 |
 | Feature dim | 57 |
@@ -942,20 +942,20 @@ Without TensorFlow, the CNN+LSTM hybrid is approximated by a deeper MLP (256→1
 
 | Metric | Value |
 | --- | --- |
-| Accuracy | 0.5571 |
-| Precision | 0.5294 |
-| Recall | 0.2812 |
-| F1-Score | 0.3673 |
-| AUC-ROC | 0.4326 |
-| Training Time | 0.109s |
+| Accuracy | 0.4583 |
+| Precision | 0.3333 |
+| Recall | 0.1818 |
+| F1-Score | 0.2353 |
+| AUC-ROC | 0.4685 |
+| Training Time | 0.174s |
 
 
 ## 11.5 Neural Network Comparison
 
 | Model | Accuracy | Precision | Recall | F1-Score | AUC-ROC | Train Time (s) |
 | --- | --- | --- | --- | --- | --- | --- |
-| MLP (windowed-feats) | 0.5571 | 0.5455 | 0.1875 | 0.2791 | 0.4918 | 0.071 |
-| CNN+LSTM (proxy) | 0.5571 | 0.5294 | 0.2812 | 0.3673 | 0.4326 | 0.109 |
+| MLP (windowed-feats) | 0.4167 | 0.0000 | 0.0000 | 0.0000 | 0.5245 | 0.077 |
+| CNN+LSTM (proxy) | 0.4583 | 0.3333 | 0.1818 | 0.2353 | 0.4685 | 0.174 |
 
 
 # 12. Final Comparison and Inference
@@ -967,13 +967,13 @@ This section unifies all models — classical ML and deep learning — ranked by
 
 | Rank | Model | Accuracy | Precision | Recall | F1-Score | AUC-ROC |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | K-Nearest Neighbors | 0.5848 | 0.5423 | 0.4995 | 0.5200 | 0.6156 |
-| 2 | Random Forest | 0.6279 | 0.6255 | 0.4326 | 0.5115 | 0.6691 |
-| 3 | Gradient Boosting | 0.5940 | 0.5795 | 0.3583 | 0.4428 | 0.6283 |
-| 4 | Support Vector Machine | 0.6084 | 0.6350 | 0.3064 | 0.4133 | 0.6335 |
-| 5 | CNN+LSTM (proxy) | 0.5571 | 0.5294 | 0.2812 | 0.3673 | 0.4326 |
-| 6 | MLP (windowed-feats) | 0.5571 | 0.5455 | 0.1875 | 0.2791 | 0.4918 |
-| 7 | Logistic Regression | 0.5468 | 0.4872 | 0.1233 | 0.1967 | 0.5332 |
+| 1 | K-Nearest Neighbors | 0.6159 | 0.5790 | 0.5374 | 0.5575 | 0.6489 |
+| 2 | Random Forest | 0.6395 | 0.6449 | 0.4431 | 0.5253 | 0.6807 |
+| 3 | Support Vector Machine | 0.6287 | 0.6789 | 0.3323 | 0.4462 | 0.6634 |
+| 4 | Gradient Boosting | 0.5876 | 0.5686 | 0.3473 | 0.4312 | 0.6211 |
+| 5 | CNN+LSTM (proxy) | 0.4583 | 0.3333 | 0.1818 | 0.2353 | 0.4685 |
+| 6 | Logistic Regression | 0.5431 | 0.4667 | 0.1048 | 0.1711 | 0.5193 |
+| 7 | MLP (windowed-feats) | 0.4167 | 0.0000 | 0.0000 | 0.0000 | 0.5245 |
 
 > **Note on Test Sets:** ML models use **engineered features** (asymmetry, band power, statistics) while neural networks operate on **windowed raw EEG** signals. Both use stratified random splits, but the feature spaces differ fundamentally. Use within-category comparisons (ML vs ML, NN vs NN) for precise model selection.
 
@@ -984,17 +984,17 @@ This section unifies all models — classical ML and deep learning — ranked by
 
 ### Best Overall Model: **K-Nearest Neighbors**
 
-Based on comprehensive evaluation, **K-Nearest Neighbors** achieves the highest F1-Score of **0.5200** with accuracy **0.5848** and AUC-ROC **0.6156**.
+Based on comprehensive evaluation, **K-Nearest Neighbors** achieves the highest F1-Score of **0.5575** with accuracy **0.6159** and AUC-ROC **0.6489**.
 
-Runner-up: **Random Forest** (F1 = 0.5115).
+Runner-up: **Random Forest** (F1 = 0.5253).
 
 **Key Observations:**
 
-- The classical ML model (**K-Nearest Neighbors**) outperforms deep learning (**CNN+LSTM (proxy)**) by **15.27** percentage points in F1-Score.
+- The classical ML model (**K-Nearest Neighbors**) outperforms deep learning (**CNN+LSTM (proxy)**) by **32.22** percentage points in F1-Score.
 
 - **For production deployment**, **K-Nearest Neighbors** is recommended.
 
-- **For low-latency applications**, **K-Nearest Neighbors** offers the fastest training (0.006s) with F1 = 0.5200.
+- **For low-latency applications**, **K-Nearest Neighbors** offers the fastest training (0.006s) with F1 = 0.5575.
 
 
 ### Per-Model Performance Inference
