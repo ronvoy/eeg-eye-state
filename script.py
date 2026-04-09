@@ -21,7 +21,7 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 from sklearn.discriminant_analysis import LinearDiscriminantAnalysis as LDA
 from sklearn.manifold import TSNE
-from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score, TimeSeriesSplit
 from sklearn.metrics import (
     accuracy_score, precision_score, recall_score, f1_score,
     confusion_matrix, roc_auc_score, roc_curve, classification_report,
@@ -1404,8 +1404,9 @@ def section_dim_reduction(df, all_features):
 def section_ml(df, all_features):
     title("10. Machine Learning Classification")
     md_text(
-        "Five classical ML algorithms are evaluated using a **80/10/10 stratified "
-        "train-validation-test split**. Each model is wrapped in a `sklearn.Pipeline` "
+        "Five classical ML algorithms are evaluated using a **80/10/10 chronological "
+        "train-validation-test split** that preserves temporal order (no future leakage). "
+        "Each model is wrapped in a `sklearn.Pipeline` "
         "that includes `StandardScaler`, ensuring that scaling is applied correctly "
         "during cross-validation (no data leakage) and simplifying deployment."
     )
@@ -1413,11 +1414,13 @@ def section_ml(df, all_features):
     X = df[all_features].values
     y = df[TARGET].values
 
-    # 3-way split: 80% train, 10% val, 10% test
-    X_train, X_temp, y_train, y_temp = train_test_split(
-        X, y, test_size=0.2, random_state=RANDOM_STATE, stratify=y)
-    X_val, X_test, y_val, y_test = train_test_split(
-        X_temp, y_temp, test_size=0.5, random_state=RANDOM_STATE, stratify=y_temp)
+    # 3-way chronological split: 80% train, 10% val, 10% test
+    n_total = len(X)
+    n_train = int(n_total * 0.8)
+    n_val = int(n_total * 0.1)
+    X_train, y_train = X[:n_train], y[:n_train]
+    X_val, y_val = X[n_train:n_train + n_val], y[n_train:n_train + n_val]
+    X_test, y_test = X[n_train + n_val:], y[n_train + n_val:]
 
     # Pipelines: StandardScaler + model (prevents CV leakage)
     models = {
@@ -1450,8 +1453,8 @@ def section_ml(df, all_features):
     # 10.1 Train/Val/Test Split & Class Balance
     subtitle("10.1 Train/Validation/Test Split & Class Balance")
     md_text(
-        "Stratified 3-way split: **80% train / 10% validation / 10% test**, "
-        "preserving class proportions across all splits. Each model is wrapped "
+        "Chronological 3-way split: **80% train / 10% validation / 10% test**, "
+        "preserving temporal order to prevent future-data leakage. Each model is wrapped "
         "in a `Pipeline(StandardScaler → Classifier)` so scaling is performed "
         "correctly inside each CV fold (no data leakage)."
     )
@@ -1523,12 +1526,14 @@ def section_ml(df, all_features):
     }
 
     # 10.2 Cross-Validation (Pipeline handles scaling — no leakage)
-    subtitle("10.2 Cross-Validation Results (5-Fold Stratified)")
+    subtitle("10.2 Cross-Validation Results (5-Fold Time-Series)")
     md_text(
-        "5-fold stratified cross-validation on the training set. "
-        "Scaling is performed inside each fold via `Pipeline`, preventing data leakage."
+        "5-fold time-series cross-validation on the training set (expanding window). "
+        "Each fold trains on all preceding data and tests on the next block, "
+        "respecting temporal order. Scaling is performed inside each fold via "
+        "`Pipeline`, preventing data leakage."
     )
-    cv = StratifiedKFold(n_splits=5, shuffle=True, random_state=RANDOM_STATE)
+    cv = TimeSeriesSplit(n_splits=5)
     cv_rows = []
     cv_detail_lines = []
     for name, model in models.items():
@@ -1840,10 +1845,12 @@ def section_neural_network(df):
         Xf = _extract_window_feats(X_win_raw)
         yf = y_win_raw
 
-        Xftr, Xftemp, yftr, yftemp = train_test_split(
-            Xf, yf, test_size=0.2, random_state=RANDOM_STATE, stratify=yf)
-        Xfval, Xfte, yfval, yfte = train_test_split(
-            Xftemp, yftemp, test_size=0.5, random_state=RANDOM_STATE, stratify=yftemp)
+        n_total = len(Xf)
+        n_train = int(n_total * 0.8)
+        n_val = int(n_total * 0.1)
+        Xftr, yftr = Xf[:n_train], yf[:n_train]
+        Xfval, yfval = Xf[n_train:n_train + n_val], yf[n_train:n_train + n_val]
+        Xfte, yfte = Xf[n_train + n_val:], yf[n_train + n_val:]
 
         sc = StandardScaler()
         Xftr  = sc.fit_transform(Xftr)
@@ -1957,11 +1964,13 @@ def section_neural_network(df):
     X_win = np.array(Xw)
     y_win = np.array(yw)
 
-    # Stratified split — non-overlapping windows prevent leakage so shuffling is safe
-    Xtr, Xtemp, ytr, ytemp = train_test_split(
-        X_win, y_win, test_size=0.2, random_state=RANDOM_STATE, stratify=y_win)
-    Xval, Xte, yval, yte = train_test_split(
-        Xtemp, ytemp, test_size=0.5, random_state=RANDOM_STATE, stratify=ytemp)
+    # Chronological split — preserves temporal order to prevent data leakage
+    n_total = len(X_win)
+    n_train = int(n_total * 0.8)
+    n_val = int(n_total * 0.1)
+    Xtr, ytr = X_win[:n_train], y_win[:n_train]
+    Xval, yval = X_win[n_train:n_train + n_val], y_win[n_train:n_train + n_val]
+    Xte, yte = X_win[n_train + n_val:], y_win[n_train + n_val:]
 
     # Scale: fit on train only
     tr_flat = Xtr.reshape(-1, Xtr.shape[-1])
@@ -1973,8 +1982,8 @@ def section_neural_network(df):
     md_text(
         f"Window size = {WINDOW} samples, step = {WINDOW} (non-overlapping). "
         f"Total windows: {len(X_win)} (train {len(Xtr)}, val {len(Xval)}, test {len(Xte)}). "
-        "**Stratified random split** is used — non-overlapping windows eliminate data "
-        "leakage risk, while stratification preserves class balance across splits."
+        "**Chronological split** is used — windows are kept in temporal order "
+        "to prevent future-data leakage in this time-series EEG dataset."
     )
 
     es = callbacks.EarlyStopping(patience=8, restore_best_weights=True,
@@ -2082,11 +2091,13 @@ def section_neural_network(df):
         f"Total samples: {len(X_spec)}."
     )
 
-    # Stratified split for spectrograms (non-overlapping windows → safe to shuffle)
-    Xtr2, Xtemp2, ytr2, ytemp2 = train_test_split(
-        X_spec, y_spec, test_size=0.2, random_state=RANDOM_STATE, stratify=y_spec)
-    Xval2, Xte2, yval2, yte2 = train_test_split(
-        Xtemp2, ytemp2, test_size=0.5, random_state=RANDOM_STATE, stratify=ytemp2)
+    # Chronological split for spectrograms (preserves temporal order)
+    n_total = len(X_spec)
+    n_train = int(n_total * 0.8)
+    n_val = int(n_total * 0.1)
+    Xtr2, ytr2 = X_spec[:n_train], y_spec[:n_train]
+    Xval2, yval2 = X_spec[n_train:n_train + n_val], y_spec[n_train:n_train + n_val]
+    Xte2, yte2 = X_spec[n_train + n_val:], y_spec[n_train + n_val:]
 
     # Normalise: fit stats on train only
     tr_mean = Xtr2.mean()
