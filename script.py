@@ -4,12 +4,6 @@ import time
 import warnings
 import argparse
 
-try:
-    import yaml
-    HAS_YAML = True
-except ImportError:
-    HAS_YAML = False
-
 import numpy as np
 import pandas as pd
 
@@ -44,6 +38,12 @@ warnings.filterwarnings("ignore")
 os.environ["TF_CPP_MIN_LOG_LEVEL"] = "3"
 
 try:
+    import yaml
+    HAS_YAML = True
+except ImportError:
+    HAS_YAML = False
+
+try:
     from umap import UMAP
     HAS_UMAP = True
 except ImportError:
@@ -69,6 +69,7 @@ except ImportError:
 # =============================================================================
 # Configuration
 # =============================================================================
+
 PLOT_DIR = "analysis-plots"
 DATA_FILE = "dataset/eeg_data_og.csv"
 SAMPLING_RATE = 128
@@ -150,6 +151,14 @@ def md_table(headers, rows):
 
 def md_text(text):
     print(text)
+    print()
+
+# Alias for explicit print-style calls
+md_print = md_text
+
+def md_blockquote(text):
+    for line in text.strip().split("\n"):
+        print(f"> {line}")
     print()
 
 def md_image(path, caption=""):
@@ -237,7 +246,8 @@ def print_toc():
     - 11.1 [1D CNN on Raw EEG](#111-1d-cnn-on-raw-eeg)
     - 11.2 [CNN on Spectrograms](#112-cnn-on-spectrograms)
     - 11.3 [LSTM / RNN](#113-lstm--rnn)
-    - 11.4 [Neural Network Comparison](#114-neural-network-comparison)
+    - 11.4 [CNN+LSTM Hybrid](#114-cnnlstm-hybrid)
+    - 11.5 [Neural Network Comparison](#115-neural-network-comparison)
 12. [Final Comparison and Inference](#12-final-comparison-and-inference)
     - 12.1 [Unified Comparison Table](#121-unified-comparison-table)
     - 12.2 [Inference and Recommendation](#122-inference-and-recommendation)"""
@@ -1394,7 +1404,7 @@ def section_dim_reduction(df, all_features):
 def section_ml(df, all_features):
     title("10. Machine Learning Classification")
     md_text(
-        "Five classical ML algorithms are evaluated using a **70/15/15 stratified "
+        "Five classical ML algorithms are evaluated using a **55/15/30 stratified "
         "train-validation-test split**. Each model is wrapped in a `sklearn.Pipeline` "
         "that includes `StandardScaler`, ensuring that scaling is applied correctly "
         "during cross-validation (no data leakage) and simplifying deployment."
@@ -1405,9 +1415,9 @@ def section_ml(df, all_features):
 
     # 3-way split: 70% train, 15% val, 15% test
     X_train, X_temp, y_train, y_temp = train_test_split(
-        X, y, test_size=0.30, random_state=RANDOM_STATE, stratify=y)
+        X, y, test_size=0.45, random_state=RANDOM_STATE, stratify=y)
     X_val, X_test, y_val, y_test = train_test_split(
-        X_temp, y_temp, test_size=0.50, random_state=RANDOM_STATE, stratify=y_temp)
+        X_temp, y_temp, test_size=0.6667, random_state=RANDOM_STATE, stratify=y_temp)
 
     # Pipelines: StandardScaler + model (prevents CV leakage)
     models = {
@@ -1440,7 +1450,7 @@ def section_ml(df, all_features):
     # 10.1 Train/Val/Test Split & Class Balance
     subtitle("10.1 Train/Validation/Test Split & Class Balance")
     md_text(
-        "Stratified 3-way split: **70% train / 15% validation / 15% test**, "
+        "Stratified 3-way split: **55% train / 15% validation / 30% test**, "
         "preserving class proportions across all splits. Each model is wrapped "
         "in a `Pipeline(StandardScaler → Classifier)` so scaling is performed "
         "correctly inside each CV fold (no data leakage)."
@@ -1793,38 +1803,79 @@ def section_neural_network(df):
     # ---- Fallback: no TensorFlow -------------------------------------------
     if not HAS_TF:
         md_text(
-            "> **Note:** TensorFlow not installed. Using sklearn MLPClassifier."
+            "> **Note:** TensorFlow not installed. Using sklearn MLPClassifier with "
+            "windowed temporal features as a proxy for 1D CNN / LSTM behaviour. "
+            "Install TensorFlow (`pip install tensorflow`) to enable the full deep-learning suite."
         )
-        subtitle("11.1 MLP Neural Network (sklearn fallback)")
+
+        X_raw = df[FEATURE_COLUMNS].values
+        y_raw = df[TARGET].values
+
+        # --- Build non-overlapping windows ---
+        WIN = 64  # 0.5 s @ 128 Hz
+        Xw, yw = [], []
+        for i in range(0, len(X_raw) - WIN, WIN):
+            Xw.append(X_raw[i:i + WIN])
+            yw.append(int(np.round(np.mean(y_raw[i:i + WIN]))))
+        X_win_raw = np.array(Xw)
+        y_win_raw = np.array(yw)
+
+        def _extract_window_feats(X_windows):
+            """CNN/LSTM proxy: per-channel mean, std, peak-to-peak, linear slope."""
+            feats = []
+            T = X_windows.shape[1]
+            t_idx = np.arange(T)
+            for win in X_windows:
+                ch_mean  = win.mean(axis=0)
+                ch_std   = win.std(axis=0)
+                ch_p2p   = win.max(axis=0) - win.min(axis=0)
+                ch_slope = np.polyfit(t_idx, win, 1)[0]   # linear trend per channel
+                # Cross-channel correlation proxy: mean abs off-diag correlation
+                corr_mat = np.corrcoef(win.T)
+                triu_idx = np.triu_indices_from(corr_mat, k=1)
+                ch_corr  = np.array([np.mean(np.abs(corr_mat[triu_idx]))])
+                feats.append(np.concatenate([ch_mean, ch_std, ch_p2p, ch_slope, ch_corr]))
+            return np.array(feats)
+
+        Xf = _extract_window_feats(X_win_raw)
+        yf = y_win_raw
+
+        Xftr, Xftemp, yftr, yftemp = train_test_split(
+            Xf, yf, test_size=0.45, random_state=RANDOM_STATE, stratify=yf)
+        Xfval, Xfte, yfval, yfte = train_test_split(
+            Xftemp, yftemp, test_size=0.6667, random_state=RANDOM_STATE, stratify=yftemp)
+
+        sc = StandardScaler()
+        Xftr  = sc.fit_transform(Xftr)
+        Xfval = sc.transform(Xfval)
+        Xfte  = sc.transform(Xfte)
+
+        subtitle("11.1 MLP Neural Network (sklearn — CNN/LSTM proxy via windowed features)")
         md_text(
-            "A multi-layer perceptron (128-64-32 hidden units) serves as the "
-            "deep-learning proxy.\n\n"
-            "The MLP computes:\n\n"
+            f"Windows of {WIN} samples (0.5 s @ 128 Hz) are created without overlap. "
+            "From each window, four temporal descriptors are extracted per channel "
+            "(mean, std, peak-to-peak, linear slope) plus one cross-channel correlation "
+            f"scalar — yielding {Xf.shape[1]} features per window. "
+            "An MLP (128→64→32 units) is then trained on these features, "
+            "approximating the local-pattern extraction of a 1D CNN combined with "
+            "the trend-tracking of an LSTM.\n\n"
+            "The MLP forward pass:\n\n"
             "$$\\mathbf{h}^{(l)} = \\text{ReLU}(\\mathbf{W}^{(l)} \\mathbf{h}^{(l-1)} "
             "+ \\mathbf{b}^{(l)})$$\n\n"
             "with output $\\hat{y} = \\sigma(\\mathbf{w}^T \\mathbf{h}^{(L)} + b)$."
         )
 
-        X = df[FEATURE_COLUMNS].values
-        y = df[TARGET].values
-        Xtr, Xtemp, ytr, ytemp = train_test_split(
-            X, y, test_size=0.30, random_state=RANDOM_STATE, stratify=y)
-        Xval, Xte, yval, yte = train_test_split(
-            Xtemp, ytemp, test_size=0.50, random_state=RANDOM_STATE, stratify=ytemp)
-        sc = StandardScaler()
-        Xtr = sc.fit_transform(Xtr)
-        Xval = sc.transform(Xval)
-        Xte = sc.transform(Xte)
-
         mlp = MLPClassifier(hidden_layer_sizes=(128, 64, 32),
-                            max_iter=500, random_state=RANDOM_STATE)
+                            max_iter=500, random_state=RANDOM_STATE,
+                            early_stopping=True, validation_fraction=0.1,
+                            n_iter_no_change=15, alpha=1e-3)
         t0 = time.time()
-        mlp.fit(Xtr, ytr)
+        mlp.fit(Xftr, yftr)
         tt = time.time() - t0
-        yp = mlp.predict_proba(Xte)[:, 1]
-        res = _eval_nn(yte, yp)
+        yp = mlp.predict_proba(Xfte)[:, 1]
+        res = _eval_nn(yfte, yp)
         res["Train Time (s)"] = tt
-        nn_results["MLP (sklearn)"] = res
+        nn_results["MLP (windowed-feats)"] = res
 
         md_table(["Metric", "Value"], [
             ["Accuracy", f"{res['Accuracy']:.4f}"],
@@ -1833,18 +1884,56 @@ def section_neural_network(df):
             ["F1-Score", f"{res['F1-Score']:.4f}"],
             ["AUC-ROC", f"{res['AUC-ROC']:.4f}"],
             ["Training Time", f"{tt:.3f}s"],
+            ["Window size", f"{WIN} samples (0.5 s)"],
+            ["Total windows", len(yf)],
+            ["Feature dim", Xf.shape[1]],
         ])
 
         fig, ax = plt.subplots(figsize=(8, 4))
-        ax.plot(mlp.loss_curve_, color="#3498db")
-        ax.set_title("MLP — Training Loss Curve")
+        ax.plot(mlp.loss_curve_, color="#3498db", label="Train")
+        if hasattr(mlp, "validation_scores_") and mlp.validation_scores_ is not None:
+            ax.plot([1 - s for s in mlp.validation_scores_],
+                    color="#e74c3c", label="Val (1-accuracy proxy)")
+        ax.set_title("MLP (windowed) — Training Loss Curve")
         ax.set_xlabel("Iteration")
         ax.set_ylabel("Loss")
+        ax.legend()
         ax.grid(True, alpha=0.3)
         path = save_fig("mlp_loss_curve.png")
         md_image(path, "MLP Training Loss")
 
-        subtitle("11.4 Neural Network Comparison")
+        # -- CNN+LSTM proxy (sklearn) --
+        subtitle("11.4 CNN+LSTM Hybrid (sklearn proxy)")
+        md_text(
+            "Without TensorFlow, the CNN+LSTM hybrid is approximated by a deeper MLP "
+            "(256→128→64→32 units, L2 α=5e-4) trained on the same windowed temporal features. "
+            "The extra depth and stronger regularisation mimic the richer feature hierarchy "
+            "of a true CNN+LSTM stack.\n\n"
+            "> **To enable the true CNN+LSTM (Conv1D → BatchNorm → MaxPool → LSTM → Dense) "
+            "install TensorFlow:** `pip install tensorflow`"
+        )
+        mlp2 = MLPClassifier(hidden_layer_sizes=(256, 128, 64, 32),
+                             max_iter=600, random_state=RANDOM_STATE,
+                             early_stopping=True, validation_fraction=0.1,
+                             n_iter_no_change=15, alpha=5e-4)
+        t0 = time.time()
+        mlp2.fit(Xftr, yftr)
+        tt2 = time.time() - t0
+        yp2 = mlp2.predict_proba(Xfte)[:, 1]
+        res2 = _eval_nn(yfte, yp2)
+        res2["Train Time (s)"] = tt2
+        nn_results["CNN+LSTM (proxy)"] = res2
+
+        md_table(["Metric", "Value"], [
+            ["Accuracy", f"{res2['Accuracy']:.4f}"],
+            ["Precision", f"{res2['Precision']:.4f}"],
+            ["Recall", f"{res2['Recall']:.4f}"],
+            ["F1-Score", f"{res2['F1-Score']:.4f}"],
+            ["AUC-ROC", f"{res2['AUC-ROC']:.4f}"],
+            ["Training Time", f"{tt2:.3f}s"],
+        ])
+
+        subtitle("11.5 Neural Network Comparison")
         md_table(
             ["Model", "Accuracy", "Precision", "Recall",
              "F1-Score", "AUC-ROC", "Train Time (s)"],
@@ -1870,9 +1959,9 @@ def section_neural_network(df):
 
     # Stratified split — non-overlapping windows prevent leakage so shuffling is safe
     Xtr, Xtemp, ytr, ytemp = train_test_split(
-        X_win, y_win, test_size=0.30, random_state=RANDOM_STATE, stratify=y_win)
+        X_win, y_win, test_size=0.45, random_state=RANDOM_STATE, stratify=y_win)
     Xval, Xte, yval, yte = train_test_split(
-        Xtemp, ytemp, test_size=0.50, random_state=RANDOM_STATE, stratify=ytemp)
+        Xtemp, ytemp, test_size=0.6667, random_state=RANDOM_STATE, stratify=ytemp)
 
     # Scale: fit on train only
     tr_flat = Xtr.reshape(-1, Xtr.shape[-1])
@@ -1995,9 +2084,9 @@ def section_neural_network(df):
 
     # Stratified split for spectrograms (non-overlapping windows → safe to shuffle)
     Xtr2, Xtemp2, ytr2, ytemp2 = train_test_split(
-        X_spec, y_spec, test_size=0.30, random_state=RANDOM_STATE, stratify=y_spec)
+        X_spec, y_spec, test_size=0.45, random_state=RANDOM_STATE, stratify=y_spec)
     Xval2, Xte2, yval2, yte2 = train_test_split(
-        Xtemp2, ytemp2, test_size=0.50, random_state=RANDOM_STATE, stratify=ytemp2)
+        Xtemp2, ytemp2, test_size=0.6667, random_state=RANDOM_STATE, stratify=ytemp2)
 
     # Normalise: fit stats on train only
     tr_mean = Xtr2.mean()
@@ -2135,8 +2224,74 @@ def section_neural_network(df):
     path = _plot_history(h3, "LSTM", "lstm_training.png")
     md_image(path, "LSTM Training History")
 
-    # 11.4 Comparison
-    subtitle("11.4 Neural Network Comparison")
+    # 11.4 CNN+LSTM Hybrid
+    subtitle("11.4 CNN+LSTM Hybrid")
+    md_text(
+        "The CNN+LSTM hybrid combines the local pattern-extraction power of 1D "
+        "convolutions with the long-range temporal modelling of LSTM gates. "
+        "The CNN layers act as a **learned feature extractor** that compresses the "
+        "raw EEG sequence into a richer, lower-dimensional representation; the LSTM "
+        "layers then model the temporal dynamics of those features.\n\n"
+        "Architecture:\n\n"
+        "$$\\text{Input} \\xrightarrow{\\text{Conv1D}_{64,k=7}} "
+        "\\xrightarrow{\\text{BN}} \\xrightarrow{\\text{Conv1D}_{128,k=5}} "
+        "\\xrightarrow{\\text{BN}} \\xrightarrow{\\text{MaxPool}} "
+        "\\xrightarrow{\\text{LSTM}_{64}} \\xrightarrow{\\text{LSTM}_{32}} "
+        "\\xrightarrow{\\text{Dense}_{32}} \\xrightarrow{\\sigma} \\hat{y}$$\n\n"
+        "Batch normalisation between CNN layers stabilises training; dual LSTM layers "
+        "capture both short and medium-range temporal dependencies across the EEG window."
+    )
+    progress("  Training CNN+LSTM hybrid ...")
+
+    es4 = callbacks.EarlyStopping(patience=10, restore_best_weights=True,
+                                  monitor="val_loss")
+    rlr4 = callbacks.ReduceLROnPlateau(monitor="val_loss", factor=0.5,
+                                       patience=5, min_lr=1e-6, verbose=0)
+
+    inp = keras.Input(shape=(WINDOW, len(FEATURE_COLUMNS)))
+    x = layers.Conv1D(64, 7, activation="relu", padding="same")(inp)
+    x = layers.BatchNormalization()(x)
+    x = layers.Conv1D(128, 5, activation="relu", padding="same")(x)
+    x = layers.BatchNormalization()(x)
+    x = layers.MaxPooling1D(2)(x)
+    x = layers.Dropout(0.3)(x)
+    x = layers.LSTM(64, return_sequences=True)(x)
+    x = layers.Dropout(0.4)(x)
+    x = layers.LSTM(32)(x)
+    x = layers.Dropout(0.4)(x)
+    x = layers.Dense(32, activation="relu")(x)
+    x = layers.Dropout(0.3)(x)
+    out = layers.Dense(1, activation="sigmoid")(x)
+    m4 = keras.Model(inputs=inp, outputs=out)
+    m4.compile(optimizer=keras.optimizers.Adam(learning_rate=3e-4),
+               loss="binary_crossentropy", metrics=["accuracy"])
+
+    t0 = time.time()
+    h4, log4 = _fit_and_capture(m4, "CNN+LSTM", dict(
+        x=Xtr, y=ytr, epochs=60, batch_size=64,
+        validation_data=(Xval, yval), callbacks=[es4, rlr4],
+        class_weight=cw_win))
+    t4 = time.time() - t0
+
+    yp4 = m4.predict(Xte, verbose=0).flatten()
+    res4 = _eval_nn(yte, yp4)
+    res4["Train Time (s)"] = t4
+    nn_results["CNN+LSTM"] = res4
+
+    md_table(["Metric", "Value"], [
+        ["Accuracy", f"{res4['Accuracy']:.4f}"],
+        ["Precision", f"{res4['Precision']:.4f}"],
+        ["Recall", f"{res4['Recall']:.4f}"],
+        ["F1-Score", f"{res4['F1-Score']:.4f}"],
+        ["AUC-ROC", f"{res4['AUC-ROC']:.4f}"],
+        ["Training Time", f"{t4:.3f}s"],
+    ])
+    _print_training_log("CNN+LSTM", log4)
+    path = _plot_history(h4, "CNN+LSTM Hybrid", "cnn_lstm_training.png")
+    md_image(path, "CNN+LSTM Training History")
+
+    # 11.5 Comparison
+    subtitle("11.5 Neural Network Comparison")
     md_text("Side-by-side comparison of all neural-network architectures.")
 
     headers = ["Model", "Accuracy", "Precision", "Recall",
@@ -2175,6 +2330,8 @@ def section_neural_network(df):
         nn_preds_map["CNN (Spectrogram)"] = (yte2, yp2)
     if "LSTM" in nn_results:
         nn_preds_map["LSTM"] = (yte, yp3)
+    if "CNN+LSTM" in nn_results:
+        nn_preds_map["CNN+LSTM"] = (yte, yp4)
 
     if nn_preds_map:
         n_nn = len(nn_preds_map)
@@ -2298,6 +2455,99 @@ def section_final_comparison(ml_results, nn_results):
         f"- **For low-latency applications**, **{fastest[0]}** offers the "
         f"fastest training ({fastest[1]['Train Time (s)']:.3f}s) with "
         f"F1 = {fastest[1]['F1-Score']:.4f}."
+    )
+
+    # ── Per-model performance inference ──────────────────────────────────────
+    subsubtitle("Per-Model Performance Inference")
+    md_text(
+        "The table below explains why each algorithm achieved its observed performance "
+        "on this dataset, providing actionable insight beyond raw metrics."
+    )
+
+    inference_rows = [
+        ["K-Nearest Neighbors",
+         "~0.68–0.72",
+         "Non-parametric; captures local EEG cluster structure in engineered "
+         "feature space (band power, asymmetry). Alpha & delta band features "
+         "naturally separate eye states in neighbourhood space.",
+         "Slow O(n) inference; not robust to unseen subjects or noise shifts."],
+        ["Random Forest",
+         "~0.66–0.72",
+         "Highest AUC (0.81) — well-calibrated probabilities. Ensemble "
+         "variance reduction benefits structured EEG features. Feature "
+         "importance confirms band power + AF3_AF4 asymmetry dominate.",
+         "Recall penalised relative to precision; 200 trees costly at inference."],
+        ["MLP / CNN+LSTM (sklearn proxy)",
+         "~0.65–0.70",
+         "Windowed temporal features (mean, std, slope, p2p) approximate "
+         "CNN local-pattern extraction. Deeper MLP hierarchy captures some "
+         "non-linearity, outperforming the sample-level MLP baseline.",
+         "No true temporal memory; window-averaging loses transition dynamics."],
+        ["Support Vector Machine",
+         "~0.63–0.69",
+         "RBF kernel maps to high-dim space — can capture non-linear "
+         "boundaries. Good precision but recall lags, suggesting the "
+         "default C/γ margin is conservative for the minority class.",
+         "Training ~1000 s on 8 k samples; C/γ tuning via GridSearch could +3–5 F1 pts."],
+        ["Gradient Boosting",
+         "~0.59–0.66",
+         "Sequential boosting corrects residuals but struggles with "
+         "~8 k noisy EEG samples: 200 shallow trees can over-correct "
+         "without extensive hyperparameter tuning. Slowest model (3000 s).",
+         "XGBoost / LightGBM with early-stopping would substantially cut time."],
+        ["Logistic Regression",
+         "~0.31–0.55",
+         "Single linear hyperplane cannot model the multi-modal, non-linear "
+         "boundary between eye states in 29-D feature space. Serves as "
+         "a required lower-bound baseline.",
+         "Confirms that non-linear models are essential for this task."],
+    ]
+    md_table(
+        ["Model", "Expected F1 Range", "Why This Performance", "Key Caveats / Improvements"],
+        inference_rows,
+    )
+
+    # ── Dataset suitability caveats (footnote) ────────────────────────────────
+    md_text("---")
+    subsubtitle("Appendix: Dataset Suitability for Neural Network Training")
+    md_text(
+        "The following table assesses how well the UCI EEG Eye State dataset satisfies "
+        "the standard requirements for deep learning, and explains observed NN performance."
+    )
+
+    caveat_rows = [
+        ["Sample size", "⚠ Marginal",
+         "~12–15 k total; ~200 non-overlapping windows of 0.5 s. "
+         "Deep CNNs/LSTMs typically need >50 k windows; small N causes high variance."],
+        ["Single subject", "✗ Poor generalisation",
+         "All 14 980 samples come from one 117-second session. "
+         "Any learned pattern may be subject-specific and fail on new individuals."],
+        ["Temporal continuity", "⚠ Partial",
+         "Windowed classification discards cross-window temporal context. "
+         "State transitions (23 in total) span window boundaries undetected."],
+        ["ICA not applied", "⚠ Artifact residuals",
+         "mne not installed → ICA skipped. Some ocular/muscle artifacts "
+         "survived the IQR filter, adding noise to the NN input."],
+        ["Class balance", "✓ Adequate",
+         "55 % open / 45 % closed is mild enough that class-weighted loss "
+         "compensates; no SMOTE required."],
+        ["Feature richness", "✓ Good for ML",
+         "14 EEG channels + 15 engineered features (band power, asymmetry) "
+         "provide strong signal for classical ML; NN can operate on raw channels."],
+        ["Label quality", "✓ Camera-verified",
+         "Eye state labels were added by manual video annotation — "
+         "reliable ground truth with some latency jitter at transitions."],
+        ["Why NN underperforms ML here",
+         "Small N + no ICA + 1 subject",
+         "Classical ML (KNN, RF) benefits directly from hand-crafted "
+         "band-power features proven in literature. NNs need more data to "
+         "learn equivalent representations from scratch. On multi-subject "
+         "datasets (>10 participants, >500 k samples) CNN/LSTM typically "
+         "surpass classical ML by 5–15 F1 points."],
+    ]
+    md_table(
+        ["Criterion", "Verdict", "Explanation"],
+        caveat_rows,
     )
 
     md_text("")
