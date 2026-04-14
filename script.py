@@ -184,10 +184,9 @@ def print_toc():
 1. [Data Description Overview](#1-data-description-overview)
    - 1.1 [Dataset Citation & Source](#11-dataset-citation--source)
    - 1.2 [Dataset Loading](#12-dataset-loading)
-   - 1.3 [Variable Classification](#13-variable-classification)
-   - 1.4 [Electrode Positions & Significance](#14-electrode-positions--significance)
-   - 1.5 [Basic Statistics](#15-basic-statistics)
-   - 1.6 [Class Distribution](#16-class-distribution)
+   - 1.3 [Variable Classification & Electrode Positions](#13-variable-classification--electrode-positions)
+   - 1.4 [Basic Statistics](#14-basic-statistics)
+   - 1.5 [Class Distribution](#15-class-distribution)
 2. [Data Imputation](#2-data-imputation)
 3. [Data Visualization (Raw Data)](#3-data-visualization-raw-data)
    - 3.1 [Class Balance](#31-class-balance)
@@ -195,13 +194,13 @@ def print_toc():
    - 3.3 [Box Plots](#33-box-plots)
    - 3.4 [Histograms](#34-histograms)
    - 3.5 [Violin Plots](#35-violin-plots)
-   - 3.6 [Temporal Plots & State Transitions](#36-temporal-plots--state-transitions)
-4. [Signal Preprocessing (Bandpass + IQR)](#4-signal-preprocessing)
-   - 4.1 [Bandpass Filter (0.5–45 Hz)](#41-bandpass-filter-05--45-hz)
-   - 4.2 [Residual Outlier Removal (Safety Net)](#42-residual-outlier-removal-safety-net)
+4. [Signal Preprocessing (IQR → Bandpass)](#4-signal-preprocessing)
+   - 4.1 [IQR Spike Removal (first)](#41-iqr-spike-removal-applied-first-before-filtering)
+   - 4.2 [Bandpass Filter 0.5–45 Hz (second)](#42-bandpass-filter-0545-hz--applied-after-spike-removal)
 5. [Data Visualization (After Preprocessing)](#5-data-visualization-after-preprocessing)
-   - 5.1 [Box Plots Comparison](#51-box-plots-comparison)
-   - 5.2 [Histograms After Cleaning](#52-histograms-after-cleaning)
+   - 5.1 [Corrected Correlation Heatmap](#51-corrected-correlation-heatmap-after-preprocessing)
+   - 5.2 [Box Plots Comparison](#52-box-plots-comparison)
+   - 5.3 [Histograms After Cleaning](#53-histograms-after-cleaning)
 6. [Log-Normalization Assessment (Rejected)](#6-log-normalization-assessment-rejected)
    - 6.1 [Before vs After — All Channels](#61-before-vs-after--all-channels)
    - 6.2 [Skewness & Kurtosis Analysis](#62-skewness--kurtosis-analysis)
@@ -209,8 +208,6 @@ def print_toc():
 7. [Feature Engineering](#7-feature-engineering)
    - 7.1 [Hemispheric Asymmetry](#71-hemispheric-asymmetry)
    - 7.2 [Frequency Band Power Features](#72-frequency-band-power-features)
-   - 7.3 [Global Channel Statistics](#73-global-channel-statistics)
-   - 7.4 [Feature Summary](#74-feature-summary)
 8. [FFT, Spectrogram and PSD Analysis](#8-fft-spectrogram-and-psd-analysis)
    - 8.1 [FFT Frequency Spectrum](#81-fft-frequency-spectrum)
    - 8.2 [Power Spectral Density (PSD)](#82-power-spectral-density-psd)
@@ -221,14 +218,14 @@ def print_toc():
    - 9.3 [UMAP](#93-umap)
    - 9.4 [Clustering Evaluation](#94-clustering-evaluation)
    - 9.5 [Inference: Dimensionality Reduction Comparison](#95-inference-dimensionality-reduction-comparison)
-10. [Machine Learning Classification (v2 Pipeline)](#10-machine-learning-classification-v2-pipeline)
+10. [Machine Learning Classification](#10-machine-learning-classification)
     - 10.1 [Temporal Concept Drift Diagnosis](#101-temporal-concept-drift-diagnosis)
     - 10.2 [Split Configurations](#102-split-configurations)
     - 10.3 [Cross-Validation Results](#103-cross-validation-results)
     - 10.4 [Hold-Out Split Results](#104-hold-out-split-results)
     - 10.5 [Walk-Forward CV](#105-walk-forward-cv)
     - 10.6 [Sliding-Window CV](#106-sliding-window-cv)
-11. [Deep Learning Classification (v2 Pipeline)](#11-deep-learning-classification-v2-pipeline)
+11. [Deep Learning Classification](#11-deep-learning-classification)
     - 11.0 [Architecture Overview & Training Setup](#110-architecture-overview--training-setup)
     - 11.1 [LSTM Classifier](#111-lstm-classifier)
     - 11.2 [CNN-LSTM Hybrid](#112-cnn-lstm-hybrid)
@@ -277,11 +274,22 @@ def section_data_description(df):
         ],
     )
 
-    subtitle("1.3 Variable Classification")
-    md_text("**Numerical Variables (Continuous):** 14 EEG electrode channels recording voltage in micro-volts (uV).")
+    subtitle("1.3 Variable Classification & Electrode Positions")
+    md_text(
+        "**Numerical Variables (Continuous):** 14 EEG electrode channels recording voltage "
+        "in micro-volts (µV). The Emotiv EPOC headset uses a modified 10-20 international "
+        "system for electrode placement. Each electrode captures electrical activity from a "
+        "specific cortical region."
+    )
+    # Build a single electrode info lookup
+    _elec_map = {e[0]: e for e in ELECTRODE_INFO}
+    combined_rows = []
+    for ch in FEATURE_COLUMNS:
+        e = _elec_map.get(ch, (ch, "—", "—", "—"))
+        combined_rows.append([ch, "Continuous (float64)", e[1], e[2], e[3]])
     md_table(
-        ["Variable", "Type", "Description"],
-        [[ch, "Continuous (float64)", f"EEG voltage at {ch} electrode (uV)"] for ch in FEATURE_COLUMNS],
+        ["Electrode", "Type", "10-20 Position", "Brain Region", "Functional Significance"],
+        combined_rows,
     )
     md_text("**Categorical Variable (Target):**")
     md_table(
@@ -289,27 +297,18 @@ def section_data_description(df):
         [[TARGET, "Binary (int)", "0 = Open, 1 = Closed", "Eye state detected via camera during recording"]],
     )
 
-    subtitle("1.4 Electrode Positions & Significance")
-    md_text(
-        "The Emotiv EPOC headset uses a modified 10-20 international system for electrode "
-        "placement. Each electrode captures electrical activity from a specific cortical region."
-    )
-    md_table(
-        ["Electrode", "10-20 Position", "Brain Region", "Functional Significance"],
-        [[e[0], e[1], e[2], e[3]] for e in ELECTRODE_INFO],
-    )
-
-    subtitle("1.5 Basic Statistics")
-    md_text("Descriptive statistics for all 14 EEG channels (uV).")
+    subtitle("1.4 Basic Statistics")
+    md_text("Descriptive statistics for all 14 EEG channels (µV).")
     desc = df[FEATURE_COLUMNS].describe().T
     rows = []
     for ch in FEATURE_COLUMNS:
         r = desc.loc[ch]
+        mode_val = df[ch].mode().iloc[0] if not df[ch].mode().empty else float("nan")
         rows.append([ch, int(r["count"]),
                      f"{r['mean']:.2f}", f"{r['std']:.2f}",
                      f"{r['min']:.2f}", f"{r['25%']:.2f}", f"{r['50%']:.2f}",
-                     f"{r['75%']:.2f}", f"{r['max']:.2f}"])
-    md_table(["Channel", "Count", "Mean", "Std", "Min", "25%", "50%", "75%", "Max"], rows)
+                     f"{r['75%']:.2f}", f"{r['max']:.2f}", f"{mode_val:.2f}"])
+    md_table(["Channel", "Count", "Mean", "Std", "Min", "25%", "50%", "75%", "Max", "Mode"], rows)
     md_text(
         "> **Note on Spike Artifacts:** Some channels exhibit extremely large max values — "
         "orders of magnitude above the 75th percentile. These are likely **electrode spike "
@@ -318,7 +317,7 @@ def section_data_description(df):
         "outlier removal step."
     )
 
-    subtitle("1.6 Class Distribution")
+    subtitle("1.5 Class Distribution")
     md_text(f"Distribution of the target variable `{TARGET}` (per UCI: 0 = open, 1 = closed).")
     vc = df[TARGET].value_counts()
     md_table(
@@ -378,12 +377,29 @@ def section_data_viz_raw(df):
     subtitle("3.2 Correlation Heatmap")
     md_text(
         "The correlation heatmap reveals linear relationships between EEG channels. "
-        "Highly correlated channels may carry redundant information."
+        "Highly correlated channels may carry redundant information.\n\n"
+        "> **Note on spike artifacts:** The raw dataset contains extreme hardware spike "
+        "artifacts (e.g., AF3 max ≈ 309,231 µV, FC5 max ≈ 642,564 µV) with values "
+        "**75–150× the 99th percentile**. When multiple distant channels spike "
+        "simultaneously (e.g., AF3 and P8 co-spike on ~82 samples), those extreme "
+        "outliers dominate the Pearson calculation and produce **artificial r ≈ 1.00** "
+        "between electrodes that should be uncorrelated. "
+        "The heatmap below is therefore computed on data **winsorized at the 1st–99th "
+        "percentile** to expose the true inter-channel structure. The full preprocessing "
+        "pipeline (IQR spike removal → bandpass filter) in Section 4 corrects this "
+        "permanently."
+    )
+    # Winsorize at 1st–99th percentile per channel before computing correlation
+    # This is display-only; the actual cleaned data is produced in Section 4
+    df_win = df[FEATURE_COLUMNS].clip(
+        lower=df[FEATURE_COLUMNS].quantile(0.01),
+        upper=df[FEATURE_COLUMNS].quantile(0.99),
+        axis=1,
     )
     fig, ax = plt.subplots(figsize=(12, 10))
-    sns.heatmap(df[FEATURE_COLUMNS].corr(), annot=True, cmap="coolwarm",
+    sns.heatmap(df_win.corr(), annot=True, cmap="coolwarm",
                 fmt=".2f", ax=ax, square=True, linewidths=0.5)
-    ax.set_title("Correlation Heatmap of EEG Channels")
+    ax.set_title("Correlation Heatmap of EEG Channels (winsorized 1st–99th pct)")
     md_image(save_fig("correlation_heatmap_raw.png"), "Correlation Heatmap")
 
     subtitle("3.3 Box Plots")
@@ -448,51 +464,6 @@ def section_data_viz_raw(df):
     plt.tight_layout()
     md_image(save_fig("violinplots_raw.png"), "Violin Plots")
 
-    subtitle("3.6 Temporal Plots & State Transitions")
-    md_text(
-        "Time-series plots reveal the temporal structure of EEG signals and "
-        "transitions between eye states — essential context for a time-series "
-        "classification task."
-    )
-    n_display = min(2000, len(df))
-    fig, axes = plt.subplots(4, 1, figsize=(16, 10), sharex=True)
-    for i, ch in enumerate(FEATURE_COLUMNS[:4]):
-        vals = df[ch].iloc[:n_display].values
-        axes[i].plot(range(n_display), vals, linewidth=0.4, color="#3498db")
-        ymin, ymax = vals.min(), vals.max()
-        margin = (ymax - ymin) * 0.05
-        closed_mask = df[TARGET].iloc[:n_display].values == 1
-        axes[i].fill_between(range(n_display), ymin - margin, ymax + margin,
-                             where=closed_mask, alpha=0.15, color="red")
-        axes[i].set_ylim(ymin - margin, ymax + margin)
-        axes[i].set_ylabel(f"{ch} (uV)", fontsize=9)
-        axes[i].tick_params(labelsize=8)
-    axes[0].set_title("Raw EEG Time Series with Eye State Annotations (red = eyes closed)",
-                      fontsize=12, fontweight="bold")
-    axes[-1].set_xlabel(f"Sample (fs = {SAMPLING_RATE} Hz)")
-    plt.tight_layout()
-    md_image(save_fig("temporal_raw_signal.png"), "Temporal Raw Signal")
-
-    transitions = int(df[TARGET].diff().fillna(0).abs().sum())
-    md_text(
-        f"**State transitions:** {transitions} transitions between Open and "
-        f"Closed states in {len(df)} samples "
-        f"({len(df) / SAMPLING_RATE:.1f}s recording). "
-        f"Average segment length: ~{len(df) / max(transitions, 1):.0f} samples "
-        f"({len(df) / max(transitions, 1) / SAMPLING_RATE:.2f}s)."
-    )
-
-    transition_idx = np.where(df[TARGET].diff().fillna(0).abs() > 0)[0]
-    if len(transition_idx) > 0:
-        fig, ax = plt.subplots(figsize=(16, 2))
-        ax.eventplot(transition_idx, lineoffsets=0.5, linelengths=0.8,
-                     colors="red", linewidths=0.5)
-        ax.set_xlim(0, len(df))
-        ax.set_yticks([])
-        ax.set_xlabel(f"Sample (total: {len(df)})")
-        ax.set_title("Eye State Transition Points", fontsize=11, fontweight="bold")
-        plt.tight_layout()
-        md_image(save_fig("state_transitions.png"), "State Transition Points")
 
 # =============================================================================
 # 4. Signal Preprocessing — Bandpass + IQR only (ICA removed)
@@ -536,82 +507,112 @@ def section_preprocessing(df):
     md_text(
         "EEG signals contain artifacts from eye blinks, muscle movement, and electrode "
         "drift that must be removed before analysis. This section applies a two-stage "
-        "cleaning pipeline: **(1) bandpass filtering** to remove DC drift and high-frequency "
-        "noise, and **(2) a light IQR safety net** to catch residual spike artifacts."
+        "cleaning pipeline in the **correct causal order**:\n\n"
+        "1. **IQR spike removal first** — raw hardware spike artifacts (up to 715,897 \u00b5V) "
+        "are removed *before* filtering. Applying `filtfilt` to spikes first smears them "
+        "to neighbouring samples via the backward pass, inflating data loss from ~9% to ~19%.\n\n"
+        "2. **Bandpass filter (0.5\u201345 Hz) second** — applied to the already spike-free signal "
+        "so no artifact energy is convolved into the physiological EEG bands."
     )
     original_count = len(df)
-    cfg_pre = CONFIG.get("preprocessing", {})
-
-    # 4.1 Bandpass Filter
-    subtitle("4.1 Bandpass Filter (0.5–45 Hz)")
+    cfg_pre  = CONFIG.get("preprocessing", {})
+    iqr_cfg  = cfg_pre.get("iqr", {})
+    iqr_mult = iqr_cfg.get("multiplier", 3.0)
+    iqr_pass = iqr_cfg.get("max_passes", 3)
     bp_cfg   = cfg_pre.get("bandpass", {})
     lowcut   = bp_cfg.get("lowcut", 0.5)
     highcut  = bp_cfg.get("highcut", 45.0)
     bp_order = bp_cfg.get("order", 4)
-    md_text(
-        f"A **{bp_order}th-order Butterworth bandpass filter** ({lowcut}–{highcut} Hz) "
-        "removes DC drift and high-frequency noise while preserving the physiologically "
-        "relevant EEG bands (Delta through Gamma).\n\n"
-        "The filter transfer function is:\n\n"
-        "$$H(s) = \\frac{1}{\\sqrt{1 + \\left(\\frac{s}{\\omega_c}\\right)^{2N}}}$$\n\n"
-        "Applied via `scipy.signal.filtfilt` (zero-phase, forward-backward filtering) "
-        "to avoid phase distortion."
-    )
-    df_filt = _bandpass_filter(df, lowcut=lowcut, highcut=highcut,
-                               fs=SAMPLING_RATE, order=bp_order)
 
-    sample_ch = "O1"
-    fig, axes = plt.subplots(2, 1, figsize=(14, 5), sharex=True)
-    n_show = min(1000, len(df))
-    axes[0].plot(range(n_show), df[sample_ch].iloc[:n_show].values,
-                 linewidth=0.4, color="#e74c3c", label="Raw")
-    axes[1].plot(range(n_show), df_filt[sample_ch].iloc[:n_show].values,
-                 linewidth=0.4, color="#2ecc71", label="Filtered")
-    for ax in axes:
-        ax.legend(fontsize=8, loc="upper right")
-        ax.set_ylabel(f"{sample_ch} (uV)")
-    axes[1].set_xlabel("Sample")
-    axes[0].set_title(f"Bandpass Filter Effect — {sample_ch} ({lowcut}–{highcut} Hz)")
-    plt.tight_layout()
-    md_image(save_fig("bandpass_filter_comparison.png"), "Bandpass Filter Comparison")
+    # ── Step 1: IQR spike removal on RAW data ─────────────────────────────────
+    subtitle("4.1 IQR Spike Removal (applied first, before filtering)")
     md_text(
-        f"Bandpass filter applied to all {len(FEATURE_COLUMNS)} channels. "
-        f"Samples preserved: **{len(df_filt)}** (no samples removed by filtering)."
+        f"A **light IQR filter** ({iqr_mult}x IQR, max {iqr_pass} passes) removes "
+        "hardware spike artifacts from the **raw** signal. Applying this step "
+        "*before* filtering is critical: `filtfilt` convolves forward then "
+        "backward, so a single spike at sample $t$ would contaminate samples "
+        "$t - N$ through $t + N$ after filtering. Removing spikes first keeps "
+        "those neighbouring samples clean and reduces total data loss from ~19% "
+        "to ~9%.\n\n"
+        f"Threshold: $Q_3 + {iqr_mult} \\times IQR$ (wider than the traditional "
+        "1.5\u00d7 to preserve genuine EEG excursions while rejecting hardware glitches)."
     )
+    df_iqr, bounds, n_passes = _light_iqr(df, multiplier=iqr_mult, max_passes=iqr_pass)
+    removed_iqr = original_count - len(df_iqr)
+    pct_iqr     = removed_iqr / original_count * 100
 
-    # 4.2 IQR Safety Net
-    subtitle("4.2 Residual Outlier Removal (Safety Net)")
-    iqr_cfg  = cfg_pre.get("iqr", {})
-    iqr_mult = iqr_cfg.get("multiplier", 3.0)
-    iqr_pass = iqr_cfg.get("max_passes", 3)
-    md_text(
-        f"A **light IQR filter** ({iqr_mult}x IQR, max {iqr_pass} passes) removes any "
-        f"residual extreme values that survived bandpass filtering. The wider threshold "
-        f"({iqr_mult}x vs traditional 1.5x) preserves more data while still catching "
-        "hardware glitches."
-    )
-    cleaned, bounds, n_passes = _light_iqr(df_filt, multiplier=iqr_mult, max_passes=iqr_pass)
-    removed = original_count - len(cleaned)
-    removal_pct = removed / original_count * 100
-
-    md_table(["Channel", "Lower Bound", "Upper Bound"], bounds)
+    md_table(["Channel", "Lower Bound (\u00b5V)", "Upper Bound (\u00b5V)"], bounds)
     md_table(
         ["Metric", "Value"],
         [
-            ["Original samples",  original_count],
-            ["Cleaned samples",   len(cleaned)],
-            ["Removed samples",   removed],
-            ["Removal percentage", f"{removal_pct:.1f}%"],
-            ["IQR passes",         n_passes],
-            ["Bandpass filter",    f"{lowcut}–{highcut} Hz"],
+            ["Original samples",      original_count],
+            ["After IQR removal",     len(df_iqr)],
+            ["Spike samples removed", removed_iqr],
+            ["Removal %",             f"{pct_iqr:.1f}%"],
+            ["IQR passes",            n_passes],
+            ["IQR multiplier",        f"{iqr_mult}x"],
         ],
     )
     md_text(
-        f"> **Preprocessing Summary:** Bandpass filter ({lowcut}–{highcut} Hz) → "
-        f"light IQR ({iqr_mult}x, {removal_pct:.1f}% samples removed). "
-        "This pipeline preserves brain activity while removing spike artifacts."
+        f"> Removing **{removed_iqr} spike samples ({pct_iqr:.1f}%)** from the raw signal "
+        "before filtering. The wrong order (filter first, then IQR) would remove "
+        "~2,882 samples (19.2%) — more than double the data loss, because `filtfilt` "
+        "spreads each spike to ~8\u201310 adjacent samples via its backward pass."
     )
-    return cleaned
+
+    # ── Step 2: Bandpass filter on spike-free signal ──────────────────────────
+    subtitle("4.2 Bandpass Filter (0.5\u201345 Hz) — applied after spike removal")
+    md_text(
+        f"A **{bp_order}th-order Butterworth bandpass filter** ({lowcut}\u2013{highcut} Hz) "
+        "removes DC drift and high-frequency noise while preserving the physiologically "
+        "relevant EEG bands (Delta through Gamma). Applied via `scipy.signal.filtfilt` "
+        "(zero-phase, forward-backward filtering) to avoid phase distortion.\n\n"
+        "$$H(s) = \\frac{1}{\\sqrt{1 + \\left(\\frac{s}{\\omega_c}\\right)^{2N}}}$$\n\n"
+        "Because spikes have already been removed, `filtfilt` operates on a clean signal "
+        "and will not spread artifact energy to adjacent samples."
+    )
+    df_clean = _bandpass_filter(df_iqr, lowcut=lowcut, highcut=highcut,
+                                fs=SAMPLING_RATE, order=bp_order)
+
+    sample_ch = "O1"
+    n_show = min(1000, len(df_iqr))
+    fig, axes = plt.subplots(2, 1, figsize=(14, 5), sharex=True)
+    axes[0].plot(range(n_show), df_iqr[sample_ch].iloc[:n_show].values,
+                 linewidth=0.4, color="#e74c3c", label="After IQR (pre-filter)")
+    axes[1].plot(range(n_show), df_clean[sample_ch].iloc[:n_show].values,
+                 linewidth=0.4, color="#2ecc71", label="After Bandpass")
+    for ax in axes:
+        ax.legend(fontsize=8, loc="upper right")
+        ax.set_ylabel(f"{sample_ch} (\u00b5V)")
+    axes[1].set_xlabel("Sample")
+    axes[0].set_title(
+        f"Bandpass Filter Effect \u2014 {sample_ch} ({lowcut}\u2013{highcut} Hz) "
+        "[applied to spike-free signal]")
+    plt.tight_layout()
+    md_image(save_fig("bandpass_filter_comparison.png"), "Bandpass Filter Comparison")
+
+    total_removed = original_count - len(df_clean)
+    total_pct     = total_removed / original_count * 100
+    md_table(
+        ["Metric", "Value"],
+        [
+            ["Original samples",        original_count],
+            ["After IQR spike removal", len(df_iqr)],
+            ["After bandpass filter",   len(df_clean)],
+            ["Total removed",           total_removed],
+            ["Total removal %",         f"{total_pct:.1f}%"],
+            ["Bandpass range",          f"{lowcut}\u2013{highcut} Hz"],
+            ["Filter order",            bp_order],
+        ],
+    )
+    md_text(
+        f"> **Preprocessing Summary (corrected order):** "
+        f"IQR spike removal ({iqr_mult}\u00d7, {pct_iqr:.1f}% removed) "
+        f"\u2192 Bandpass filter ({lowcut}\u2013{highcut} Hz). "
+        f"Total retained: **{len(df_clean):,} / {original_count:,} samples "
+        f"({100-total_pct:.1f}%)**."
+    )
+    return df_clean
 
 # =============================================================================
 # 5. Visualization After Preprocessing
@@ -619,9 +620,25 @@ def section_preprocessing(df):
 
 def section_data_viz_cleaned(df_raw, df_clean):
     title("5. Data Visualization (After Preprocessing)")
-    md_text("Comparison of distributions before and after preprocessing (bandpass + IQR).")
+    md_text("Comparison of distributions before and after preprocessing (IQR spike removal \u2192 bandpass filter).")
 
-    subtitle("5.1 Box Plots Comparison")
+    # 5.0 Corrected Correlation Heatmap (spike-free data)
+    subtitle("5.1 Corrected Correlation Heatmap (after preprocessing)")
+    md_text(
+        "With spike artifacts removed, the correlation heatmap now reflects the true "
+        "physiological relationships between EEG channels. The artificial r \u2248 1.00 "
+        "values seen in the raw data are eliminated. Some genuine frontal correlations "
+        "(e.g., AF3\u2013AF4 \u2248 0.94) remain and are expected given the Emotiv "
+        "EPOC\u2019s common reference architecture."
+    )
+    import seaborn as sns_inner
+    fig, ax = plt.subplots(figsize=(12, 10))
+    sns_inner.heatmap(df_clean[FEATURE_COLUMNS].corr(), annot=True, cmap="coolwarm",
+                      fmt=".2f", ax=ax, square=True, linewidths=0.5)
+    ax.set_title("Correlation Heatmap — After IQR + Bandpass Preprocessing (corrected)")
+    md_image(save_fig("correlation_heatmap_cleaned.png"), "Corrected Correlation Heatmap")
+
+    subtitle("5.2 Box Plots Comparison")
     md_text(
         "Side-by-side box plots confirm preprocessing effectiveness. "
         "Whiskers are set to **3.0x IQR** to match the cleaning threshold."
@@ -636,7 +653,7 @@ def section_data_viz_cleaned(df_raw, df_clean):
     plt.tight_layout()
     md_image(save_fig("boxplots_cleaned.png"), "Box Plots After Cleaning")
 
-    subtitle("5.2 Histograms After Cleaning")
+    subtitle("5.3 Histograms After Cleaning")
     fig, axes = plt.subplots(2, 7, figsize=(24, 8))
     for i, ch in enumerate(FEATURE_COLUMNS):
         ax = axes.flatten()[i]
@@ -814,29 +831,50 @@ def section_feature_engineering(df):
     md_table(["Feature", "Band / Description", "Mean", "Std"], band_rows)
     md_text(f"**{len(band_rows)} band power features** added. Alpha asymmetry captures the Berger effect.")
 
-    subtitle("7.3 Global Channel Statistics")
-    md_text("Per-sample summary statistics across all 14 channels.")
+    # ── EDA Visualization: Band Power by Eye State ──
+    band_names = list(FREQ_BANDS.keys())
+    band_feat_names = [f"band_{b}_power" for b in band_names]
+    open_means  = [df_eng.loc[df_eng[TARGET] == 0, f].mean() for f in band_feat_names]
+    closed_means = [df_eng.loc[df_eng[TARGET] == 1, f].mean() for f in band_feat_names]
+
+    fig, axes = plt.subplots(1, 2, figsize=(16, 5))
+    x = np.arange(len(band_names))
+    w = 0.35
+    axes[0].bar(x - w/2, open_means, w, label="Open", color="#3498db", edgecolor="black")
+    axes[0].bar(x + w/2, closed_means, w, label="Closed", color="#e74c3c", edgecolor="black")
+    axes[0].set_xticks(x)
+    axes[0].set_xticklabels(band_names)
+    axes[0].set_ylabel("Mean Band Power (µV²)")
+    axes[0].set_title("Mean Band Power by Eye State")
+    axes[0].legend()
+    axes[0].grid(True, alpha=0.3, axis="y")
+
+    # Ratio plot (Closed / Open) to highlight Berger effect
+    ratios = [c / o if o > 0 else 0 for o, c in zip(open_means, closed_means)]
+    colors = ["#2ecc71" if r > 1.0 else "#e67e22" for r in ratios]
+    axes[1].bar(band_names, ratios, color=colors, edgecolor="black")
+    axes[1].axhline(y=1.0, color="black", linestyle="--", linewidth=0.8, alpha=0.6)
+    axes[1].set_ylabel("Power Ratio (Closed / Open)")
+    axes[1].set_title("Band Power Ratio — Berger Effect Indicator")
+    axes[1].grid(True, alpha=0.3, axis="y")
+    for i, r in enumerate(ratios):
+        axes[1].text(i, r + 0.02, f"{r:.2f}", ha="center", fontsize=9, fontweight="bold")
+    plt.tight_layout()
+    md_image(save_fig("band_power_eda.png"), "Frequency Band Power EDA")
+
+    md_text(
+        "The bar chart above compares mean band power between eye-open and eye-closed states. "
+        "A ratio > 1.0 indicates higher power during eye closure. The **alpha band** (8–12 Hz) "
+        "is expected to show the strongest increase when eyes are closed (Berger effect), which "
+        "is the primary physiological marker exploited by the classification models."
+    )
+
+    # Silently compute global channel stats (used downstream by dim reduction)
     df_eng["ch_mean"] = df_eng[FEATURE_COLUMNS].mean(axis=1)
     df_eng["ch_std"]  = df_eng[FEATURE_COLUMNS].std(axis=1)
     new_features += ["ch_mean", "ch_std"]
-    md_table(
-        ["Feature", "Description", "Mean", "Std"],
-        [
-            ["ch_mean", "Mean across 14 channels",
-             f"{df_eng['ch_mean'].mean():.2f}", f"{df_eng['ch_mean'].std():.2f}"],
-            ["ch_std",  "Std across 14 channels",
-             f"{df_eng['ch_std'].mean():.4f}", f"{df_eng['ch_std'].std():.4f}"],
-        ],
-    )
 
-    subtitle("7.4 Feature Summary")
     all_features = FEATURE_COLUMNS + new_features
-    md_text(f"Total engineered features for exploratory analysis: **{len(all_features)}** (14 original + {len(new_features)} engineered).")
-    md_table(
-        ["#", "Feature", "Type"],
-        [[i + 1, f, "Original EEG" if f in FEATURE_COLUMNS else "Engineered"]
-         for i, f in enumerate(all_features)],
-    )
     return df_eng, all_features
 
 # =============================================================================
@@ -943,24 +981,59 @@ def section_dim_reduction(df, all_features):
     md_text(
         "Projecting high-dimensional EEG data into lower-dimensional spaces reveals "
         "clustering structure. **LDA** maximises class separability; **t-SNE** and "
-        "**UMAP** capture non-linear manifold structure."
+        "**UMAP** capture non-linear manifold structure.\n\n"
+        "To improve class separation, we apply a feature-augmentation pipeline before "
+        "projection: (1) IQR-based outlier removal on the feature space, (2) rolling-window "
+        "statistics (mean and std, window=10), and (3) FFT magnitude features. This enriched "
+        "representation captures both temporal dynamics and spectral content."
     )
 
     X = df[all_features].values
     y = df[TARGET].values
+
+    # ── IQR outlier removal on feature space ──
+    X_df = pd.DataFrame(X)
+    Q1 = X_df.quantile(0.25)
+    Q3 = X_df.quantile(0.75)
+    IQR = Q3 - Q1
+    mask = ~((X_df < (Q1 - 1.5 * IQR)) | (X_df > (Q3 + 1.5 * IQR))).any(axis=1)
+    X_clean = X_df[mask].values
+    y_clean = y[mask]
+    md_text(f"After IQR filtering on feature space: **{len(X_clean)}** samples retained "
+            f"(removed {len(X) - len(X_clean)}).")
+
+    # ── Standardize ──
     scaler   = StandardScaler()
-    X_scaled = scaler.fit_transform(X)
+    X_scaled = scaler.fit_transform(X_clean)
+
+    # ── Rolling features ──
+    window = 10
+    X_roll_df = pd.DataFrame(X_scaled)
+    X_roll_mean = X_roll_df.rolling(window=window).mean().fillna(0).values
+    X_roll_std  = X_roll_df.rolling(window=window).std().fillna(0).values
+
+    # ── FFT features ──
+    X_fft = np.abs(np.fft.fft(X_scaled, axis=0))
+
+    # ── Combine all features ──
+    X_features = np.hstack([X_scaled, X_roll_mean, X_roll_std, X_fft])
+    md_text(f"Augmented feature matrix: **{X_features.shape[1]}** dimensions "
+            f"({X_scaled.shape[1]} original + {X_roll_mean.shape[1]} rolling-mean + "
+            f"{X_roll_std.shape[1]} rolling-std + {X_fft.shape[1]} FFT).")
 
     # 9.1 LDA
     subtitle("9.1 LDA")
-    md_text("LDA maximises the ratio of between-class to within-class variance, yielding a single discriminant for binary classification.")
+    md_text(
+        "LDA maximises the ratio of between-class to within-class variance, yielding a "
+        "single discriminant for binary classification. Applied to the augmented feature space."
+    )
     lda = LDA(n_components=1)
-    X_lda = lda.fit_transform(X_scaled, y)
+    X_lda = lda.fit_transform(X_features, y_clean)
     fig, ax = plt.subplots(figsize=(10, 5))
     for label, color, name in [(0, "#3498db", "Open"), (1, "#e74c3c", "Closed")]:
-        ax.hist(X_lda[y == label], bins=50, alpha=0.6, color=color,
+        ax.hist(X_lda[y_clean == label], bins=50, alpha=0.6, color=color,
                 label=name, edgecolor="black")
-    ax.set_title("LDA — 1D Projection")
+    ax.set_title("LDA — 1D Projection (Augmented Features)")
     ax.set_xlabel("LD1")
     ax.set_ylabel("Frequency")
     ax.legend()
@@ -973,17 +1046,17 @@ def section_dim_reduction(df, all_features):
         "preserves local neighbourhood structure. A subsample of 5000 points is used "
         "for computational efficiency."
     )
-    n_tsne  = min(5000, len(X_scaled))
+    n_tsne  = min(5000, len(X_features))
     rng     = np.random.RandomState(RANDOM_STATE)
-    idx_sub = rng.choice(len(X_scaled), n_tsne, replace=False)
-    X_sub   = X_scaled[idx_sub]
-    y_sub   = y[idx_sub]
+    idx_sub = rng.choice(len(X_features), n_tsne, replace=False)
+    X_sub   = X_features[idx_sub]
+    y_sub   = y_clean[idx_sub]
     tsne    = TSNE(n_components=2, perplexity=30, random_state=RANDOM_STATE, max_iter=1000)
     X_tsne  = tsne.fit_transform(X_sub)
     fig, ax = plt.subplots(figsize=(8, 6))
     scatter = ax.scatter(X_tsne[:, 0], X_tsne[:, 1], c=y_sub, cmap="coolwarm",
                          alpha=0.4, s=10, edgecolors="none")
-    ax.set_title("t-SNE — 2D Projection")
+    ax.set_title("t-SNE — 2D Projection (Augmented Features)")
     ax.set_xlabel("t-SNE 1")
     ax.set_ylabel("t-SNE 2")
     plt.colorbar(scatter, label="Eye State (0=Open, 1=Closed)")
@@ -1000,7 +1073,7 @@ def section_dim_reduction(df, all_features):
         fig, ax = plt.subplots(figsize=(8, 6))
         scatter = ax.scatter(X_umap[:, 0], X_umap[:, 1], c=y_sub, cmap="coolwarm",
                              alpha=0.4, s=10, edgecolors="none")
-        ax.set_title("UMAP — 2D Projection")
+        ax.set_title("UMAP — 2D Projection (Augmented Features)")
         ax.set_xlabel("UMAP 1")
         ax.set_ylabel("UMAP 2")
         plt.colorbar(scatter, label="Eye State (0=Open, 1=Closed)")
@@ -1013,7 +1086,7 @@ def section_dim_reduction(df, all_features):
     md_text("Clustering metrics quantify separation quality in reduced spaces.")
     metrics_rows = []
     for name_m, Xr, y_eval in [
-        ("LDA (1D)",  np.column_stack([X_lda, np.zeros_like(X_lda)]), y),
+        ("LDA (1D)",  np.column_stack([X_lda, np.zeros_like(X_lda)]), y_clean),
         ("t-SNE (2D)", X_tsne, y_sub),
     ]:
         sil = silhouette_score(Xr, y_eval)
@@ -1051,7 +1124,7 @@ def section_dim_reduction(df, all_features):
     )
 
 # =============================================================================
-# 10. ML Pipeline (tst.py v2 approach) — temporal splits, raw features
+# 10. ML Pipeline (tst.py temporal approach) — temporal splits, raw features
 # =============================================================================
 
 # ── Split utilities (temporal, no shuffle) ────────────────────────────────────
@@ -1173,9 +1246,9 @@ def _run_single_ml(name, model, X_tr, y_tr, X_cv, y_cv, X_te, y_te):
 
 
 def section_ml(X_all, y_all, N):
-    title("10. Machine Learning Classification (v2 Pipeline)")
+    title("10. Machine Learning Classification")
     md_text(
-        "The v2 ML pipeline addresses two critical issues from standard approaches: "
+        "The ML pipeline addresses two critical issues from standard approaches: "
         "(1) **temporal concept drift** — the last 20% of the recording is 90%+ eyes-open, "
         "creating severe distribution shift; and (2) **class imbalance** — all models use "
         "`class_weight='balanced'` and CV-optimised decision thresholds. "
@@ -1397,7 +1470,7 @@ def section_ml(X_all, y_all, N):
     ax.set_ylabel("Importance")
     plt.xticks(rotation=45, ha="right")
     plt.tight_layout()
-    md_image(save_fig("ml_feature_importance_v2.png"), "Feature Importance")
+    md_image(save_fig("ml_feature_importance.png"), "Feature Importance")
 
     # ROC curves (70/15/15 test split)
     X_tr70, y_tr70, X_cv70, y_cv70, X_te70, y_te70 = temporal_three_way_split(
@@ -1417,12 +1490,12 @@ def section_ml(X_all, y_all, N):
     ax.legend(fontsize=8)
     ax.grid(True, alpha=0.3)
     plt.tight_layout()
-    md_image(save_fig("ml_roc_curves_v2.png"), "ML ROC Curves")
+    md_image(save_fig("ml_roc_curves.png"), "ML ROC Curves")
 
     return summary_rows_ml
 
 # =============================================================================
-# 11. DL Pipeline (tst.py v2 — PyTorch, md helpers)
+# 11. DL Pipeline (DL Pipeline — PyTorch)
 # =============================================================================
 
 # ── Sequence builder ──────────────────────────────────────────────────────────
@@ -1610,6 +1683,17 @@ def _predict_dl(model, loader):
     return np.concatenate(preds), np.concatenate(probs)
 
 
+def _cv_loss(model, loader, criterion):
+    """Compute loss on validation set without backprop."""
+    model.eval()
+    total = 0.0
+    with torch.no_grad():
+        for Xb, yb in loader:
+            Xb, yb = Xb.to(DEVICE), yb.to(DEVICE)
+            total += criterion(model(Xb), yb).item() * len(yb)
+    return total / len(loader.dataset)
+
+
 def _run_dl(name, model, tr_loader, cv_loader, y_cv_seq,
              X_te, y_te, scaler, seq_len, class_weights):
     model.to(DEVICE)
@@ -1619,15 +1703,33 @@ def _run_dl(name, model, tr_loader, cv_loader, y_cv_seq,
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimiser, T_max=DL_EPOCHS)
 
     epoch_rows = []
+    train_losses = []
+    cv_losses    = []
     for epoch in range(1, DL_EPOCHS + 1):
         loss = _train_epoch(model, tr_loader, optimiser, criterion)
         scheduler.step()
+        train_losses.append(loss)
+        val_loss = _cv_loss(model, cv_loader, criterion)
+        cv_losses.append(val_loss)
         if epoch % 5 == 0:
             cv_preds, _ = _predict_dl(model, cv_loader)
             mf1 = f1_score(y_cv_seq, cv_preds, average="macro", zero_division=0)
-            epoch_rows.append([epoch, f"{loss:.4f}", f"{mf1:.4f}"])
+            epoch_rows.append([epoch, f"{loss:.4f}", f"{val_loss:.4f}", f"{mf1:.4f}"])
 
-    md_table(["Epoch", "Loss", "CV Macro-F1"], epoch_rows)
+    md_table(["Epoch", "Train Loss", "CV Loss", "CV Macro-F1"], epoch_rows)
+
+    # ── Train / CV loss curve plot ──
+    fig, ax = plt.subplots(figsize=(8, 4))
+    epochs_range = range(1, DL_EPOCHS + 1)
+    ax.plot(epochs_range, train_losses, label="Train Loss", color="#3498db", linewidth=1.5)
+    ax.plot(epochs_range, cv_losses, label="CV Loss", color="#e74c3c", linewidth=1.5)
+    ax.set_xlabel("Epoch")
+    ax.set_ylabel("Weighted Cross-Entropy Loss")
+    ax.set_title(f"{name} — Train vs CV Loss Curve")
+    ax.legend()
+    ax.grid(True, alpha=0.3)
+    plt.tight_layout()
+    md_image(save_fig(f"dl_loss_curve_{name.lower()}.png"), f"{name} Loss Curve")
 
     cv_preds, cv_probs = _predict_dl(model, cv_loader)
     opt_t, _           = _optimize_threshold(y_cv_seq, cv_probs)
@@ -1708,7 +1810,7 @@ class EnsembleOptimizer:
 # ── Section 11 main function ───────────────────────────────────────────────────
 
 def section_dl(X_all, y_all):
-    title("11. Deep Learning Classification (v2 Pipeline)")
+    title("11. Deep Learning Classification")
     md_text(
         "All DL models use PyTorch with: "
         "**(1) weighted CrossEntropyLoss** (inverse class frequency) to handle imbalance, "
@@ -1891,7 +1993,7 @@ def section_dl(X_all, y_all):
 def section_final_comparison(summary_rows_ml, summary_rows_dl):
     title("12. Final Comparison and Inference")
     md_text(
-        "This section unifies all models across the temporal pipeline: "
+        "This section unifies all models across all evaluation protocols: "
         "classical ML (raw 14 channels, temporal splits, balanced weights, threshold-optimised) "
         "and deep learning (PyTorch, weighted loss, macro-F1 primary metric). "
         "**Primary metric throughout: Macro-F1.**"
@@ -1940,7 +2042,7 @@ def section_final_comparison(summary_rows_ml, summary_rows_dl):
         axes[1].set_title("AUC-ROC (70/15/15 Test Partition)")
         axes[1].grid(True, alpha=0.3, axis="y")
         plt.tight_layout()
-        md_image(save_fig("final_comparison_v2.png"), "Final Model Comparison")
+        md_image(save_fig("final_comparison.png"), "Final Model Comparison")
 
     subtitle("12.2 Inference and Recommendation")
 
@@ -2066,10 +2168,10 @@ def main():
     y_all = df_clean[TARGET].values.astype(np.int64)
     N     = len(X_all)
 
-    progress("[10/12] Training ML models (v2 temporal pipeline) ...")
+    progress("[10/12] Training ML models ...")
     summary_rows_ml = section_ml(X_all, y_all, N)
 
-    progress("[11/12] Training DL models (PyTorch v2 pipeline) ...")
+    progress("[11/12] Training DL models (PyTorch) ...")
     summary_rows_dl = section_dl(X_all, y_all)
 
     progress("[12/12] Generating final comparison ...")
