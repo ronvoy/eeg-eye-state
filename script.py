@@ -93,7 +93,7 @@ HEMI_PAIRS = [
 ]
 FREQ_BANDS = {
     "Delta": (0.5, 4), "Theta": (4, 8), "Alpha": (8, 12),
-    "Beta": (12, 30), "Gamma": (30, 64),
+    "Beta": (12, 30), "Gamma": (30, 45),
 }
 BAND_COLORS = ["#8B0000", "#FF4500", "#FFD700", "#00CED1", "#9370DB"]
 
@@ -310,7 +310,9 @@ def section_data_description(df):
                      f"{r['75%']:.2f}", f"{r['max']:.2f}", f"{mode_val:.2f}"])
     md_table(["Channel", "Count", "Mean", "Std", "Min", "25%", "50%", "75%", "Max", "Mode"], rows)
     md_text(
-        "> **Note on Spike Artifacts:** Some channels exhibit extremely large max values — "
+        "> **Note on Spike Artifacts:** Artifact on EEG is any signal that doesn't come from "
+        "the brain itself; this includes electrical, movement, physiologic and many other kinds "
+        "of artifact. Some channels exhibit extremely large max values — "
         "orders of magnitude above the 75th percentile. These are likely **electrode spike "
         "artifacts** caused by momentary loss of contact, muscle movement, or impedance "
         "changes in the Emotiv headset. These extreme values will be addressed by the "
@@ -567,7 +569,11 @@ def section_preprocessing(df):
         "removes DC drift and high-frequency noise while preserving the physiologically "
         "relevant EEG bands (Delta through Gamma). Applied via `scipy.signal.filtfilt` "
         "(zero-phase, forward-backward filtering) to avoid phase distortion.\n\n"
-        "$$H(s) = \\frac{1}{\\sqrt{1 + \\left(\\frac{s}{\\omega_c}\\right)^{2N}}}$$\n\n"
+        "The bandpass is implemented as a cascade of highpass ($f_L$ = "
+        f"{lowcut} Hz) and lowpass ($f_H$ = {highcut} Hz) Butterworth stages:\n\n"
+        "$$|H(j\\omega)|^2 = \\frac{1}{1 + \\left(\\frac{\\omega_c}{\\omega^2 - \\omega_0^2}\\right)^{2N}}$$\n\n"
+        "where $\\omega_0 = \\sqrt{\\omega_L \\cdot \\omega_H}$ and $N$ = "
+        f"{bp_order} is the filter order. "
         "Because spikes have already been removed, `filtfilt` operates on a clean signal "
         "and will not spread artifact energy to adjacent samples."
     )
@@ -886,7 +892,7 @@ def section_fft_psd_spectro(df):
     md_text(
         "Frequency-domain analysis reveals the power distribution across brain wave "
         "bands: **Delta** (0.5-4 Hz), **Theta** (4-8 Hz), **Alpha** (8-12 Hz), "
-        "**Beta** (12-30 Hz), and **Gamma** (30-64 Hz). Alpha power increases when "
+        "**Beta** (12-30 Hz), and **Gamma** (30-45 Hz). Alpha power increases when "
         "eyes are closed (the **Berger effect**)."
     )
 
@@ -923,14 +929,14 @@ def section_fft_psd_spectro(df):
         fc, pc = welch(df_closed[ch].values, SAMPLING_RATE, nperseg=nperseg)
         ax.semilogy(fo, po, label="Open",   color="blue", linewidth=1, alpha=0.8)
         ax.semilogy(fc, pc, label="Closed", color="red",  linewidth=1, alpha=0.8)
-        ax.set_xlim(0, 35)
+        ax.set_xlim(0, 45)
         ax.set_title(ch, fontsize=9, fontweight="bold")
         ax.tick_params(labelsize=6)
         ylims = ax.get_ylim()
         for i, (bname, (lo, hi)) in enumerate(FREQ_BANDS.items()):
-            bhi = min(hi, 35)
+            bhi = min(hi, 45)
             ax.axvspan(lo, bhi, alpha=0.08, color=BAND_COLORS[i])
-            if bhi <= 35:
+            if bhi <= 45:
                 ax.text((lo + bhi) / 2, ylims[1] * 0.3, bname, fontsize=5,
                         ha="center", va="top", color=BAND_COLORS[i],
                         fontweight="bold", rotation=90)
@@ -960,10 +966,10 @@ def section_fft_psd_spectro(df):
                                           nperseg=seg, noverlap=seg // 2)
             ax.pcolormesh(t, f, 10 * np.log10(Sxx + 1e-10),
                           shading="gouraud", cmap="viridis")
-            ax.set_ylim(0, 30)
+            ax.set_ylim(0, 45)
             ax.set_title(ch, fontsize=9, fontweight="bold")
             ax.tick_params(labelsize=6)
-            for freq in [4, 8, 12, 30]:
+            for freq in [4, 8, 12, 30, 45]:
                 ax.axhline(y=freq, color="white", linestyle="--",
                            linewidth=0.4, alpha=0.5)
         plt.suptitle(f"Spectrograms — Eyes {state_name} (All Channels)",
@@ -1012,8 +1018,13 @@ def section_dim_reduction(df, all_features):
     X_roll_mean = X_roll_df.rolling(window=window).mean().fillna(0).values
     X_roll_std  = X_roll_df.rolling(window=window).std().fillna(0).values
 
-    # ── FFT features ──
-    X_fft = np.abs(np.fft.fft(X_scaled, axis=0))
+    # ── FFT features (per-sample magnitude via short sliding window) ──
+    fft_window = window  # reuse rolling window size
+    X_fft = np.zeros_like(X_scaled)
+    for i in range(len(X_scaled)):
+        start = max(0, i - fft_window + 1)
+        segment = X_scaled[start:i + 1]
+        X_fft[i] = np.abs(np.fft.fft(segment, axis=0)).mean(axis=0)
 
     # ── Combine all features ──
     X_features = np.hstack([X_scaled, X_roll_mean, X_roll_std, X_fft])
@@ -1390,7 +1401,8 @@ def section_ml(X_all, y_all, N):
     md_text(
         "Expanding-window walk-forward CV simulates real deployment: the model "
         "always trains on all available past data before predicting the next window. "
-        "Future data never leaks into training."
+        "Future data never leaks into training. A fixed threshold of 0.5 is used "
+        "for unbiased evaluation (threshold tuning on the same fold would inflate scores)."
     )
     wf_agg = defaultdict(list)
     for fi, (tr_sl, val_sl) in enumerate(walk_forward_cv_indices(N)):
@@ -1400,12 +1412,13 @@ def section_ml(X_all, y_all, N):
         for name, model in _get_ml_models(y_all).items():
             model.fit(X_tr, y_tr)
             prob  = model.predict_proba(X_val)[:, 1]
-            opt_t, _ = _optimize_threshold(y_val, prob)
-            pred  = (prob >= opt_t).astype(int)
+            # Use fixed threshold 0.5 for unbiased CV evaluation
+            # (threshold tuning on same fold inflates scores)
+            pred  = (prob >= 0.5).astype(int)
             m = _evaluate_ml(y_val, pred, prob)
-            m["opt_t"] = opt_t
+            m["opt_t"] = 0.5
             wf_agg[name].append(m)
-            md_print(f"  {name}: Acc={m['acc']:.4f} MacroF1={m['macro_f1']:.4f} AUC={m['auc']:.4f} t={opt_t:.2f}")
+            md_print(f"  {name}: Acc={m['acc']:.4f} MacroF1={m['macro_f1']:.4f} AUC={m['auc']:.4f} t=0.50")
 
     md_text("**Walk-Forward CV — Mean ± Std (primary: Macro-F1):**")
     wf_rows = []
@@ -1434,8 +1447,8 @@ def section_ml(X_all, y_all, N):
         for name, model in _get_ml_models(y_all).items():
             model.fit(X_tr, y_tr)
             prob  = model.predict_proba(X_val)[:, 1]
-            opt_t, _ = _optimize_threshold(y_val, prob)
-            pred  = (prob >= opt_t).astype(int)
+            # Use fixed threshold 0.5 for unbiased CV evaluation
+            pred  = (prob >= 0.5).astype(int)
             m = _evaluate_ml(y_val, pred, prob)
             sw_agg[name].append(m)
             md_print(f"  {name}: Acc={m['acc']:.4f} MacroF1={m['macro_f1']:.4f} AUC={m['auc']:.4f}")
@@ -1822,10 +1835,12 @@ def section_dl(X_all, y_all):
 
     subtitle("11.0 Architecture Overview & Training Setup")
     md_text(
-        "**Binary Cross-Entropy (weighted):**\n\n"
+        "**Weighted Cross-Entropy Loss:**\n\n"
         "$$\\mathcal{L} = -\\frac{1}{N}\\sum_{i=1}^{N} w_{y_i} "
-        "\\left[y_i \\log(\\hat{p}_i) + (1-y_i)\\log(1-\\hat{p}_i)\\right]$$\n\n"
-        "where $w_c = \\frac{N}{2 \\cdot N_c}$ is the per-class weight. "
+        "\\log\\left(\\frac{e^{z_{y_i}}}{\\sum_{c=0}^{1} e^{z_c}}\\right)$$\n\n"
+        "where $w_c = \\frac{N}{2 \\cdot N_c}$ is the per-class weight and "
+        "$z_c$ are the raw logits from the final linear layer (2 output units). "
+        "This is `nn.CrossEntropyLoss` (softmax + negative log-likelihood). "
         "**Sequence length:** SEQ_LEN=64 samples (≈500ms at 128 Hz). "
         "**Optimizer:** AdamW, lr=1e-3, weight_decay=1e-4. "
         "**Scheduler:** CosineAnnealingLR over 25 epochs."
@@ -1836,7 +1851,7 @@ def section_dl(X_all, y_all):
             ["LSTM",          "BiLSTM(128)×2 → AvgPool → MLP",        "~200K", "Long-range temporal dependencies"],
             ["CNN-LSTM",      "Conv1D(64,128) → BiLSTM(64) → MLP",    "~150K", "Local feature extraction + sequence memory"],
             ["EEGTransformer","CLS + PE + 3× TransEnc(d=64,h=4) → MLP","~80K", "Global cross-electrode attention"],
-            ["EEGNet",        "Depthwise Conv2D blocks → Linear",       "~400", "Electrode-aware, compact, best calibrated"],
+            ["EEGNet",        "Depthwise Conv2D blocks → Linear",       "~1.1K", "Electrode-aware, compact, best calibrated"],
             ["PatchTST_Lite", "15 patches + CLS + 2× TransEnc → MLP",  "~50K", "Multi-scale local+global context"],
         ]
     )
@@ -1886,7 +1901,7 @@ def section_dl(X_all, y_all):
             "EEGNet (Lawhern et al. 2018) uses depthwise-separable 2D convolutions that "
             "explicitly model temporal patterns (Block 1 temporal kernel ≈ 250ms) "
             "and cross-electrode spatial patterns (Block 1 depthwise spatial filter). "
-            "Only ~400 parameters — highly resistant to overfitting on limited data."
+            "Only ~1.1K parameters — highly resistant to overfitting on limited data."
         ),
         "PatchTST_Lite": (
             "Patch-based Transformer (Nie et al. 2023) divides the 64-sample window into "
@@ -2075,33 +2090,38 @@ def section_final_comparison(summary_rows_ml, summary_rows_dl):
     )
 
     md_text("**Key Observations:**")
+
+    # Dynamically compute correct claims from actual results
+    _split70 = df_sum[df_sum["split"] == "70/15/15"]
+    _best70 = _split70.loc[_split70["macro_f1"].idxmax()] if not _split70.empty else None
+    _split60 = df_sum[df_sum["split"] == "60/20/20"]
+    _best60_ml = _split60[_split60["type"] == "ML"].sort_values("macro_f1", ascending=False).iloc[0] if not _split60[_split60["type"] == "ML"].empty else None
+
     md_text(
-        "- The last 15% of the recording is 8.1% closed-eye, creating a 44.9% distribution "
+        "- The last 15% of the recording is ~8% closed-eye, creating a ~45% distribution "
         "shift between training and test. This is the root cause of all metric paradoxes.\n"
         "- Models with well-calibrated probabilities (LogReg, EEGNet) transfer thresholds "
-        "across the distribution shift more reliably than uncalibrated models (CNN-LSTM).\n"
-        "- **EEGNet** achieves the best single-split Macro-F1 (0.6518 on 70/15/15) because "
-        "its depthwise 2D convolutions match the neurophysiology of the alpha-band Berger "
-        "effect, its threshold ≈ 0.58 is naturally calibrated, and ~400 parameters resist "
-        "overfitting on limited data.\n"
-        "- **GradientBoosting** is the most robust ML model — lowest Walk-Forward CV variance "
-        "and best ML performance on the hardest 60/20/20 split (51.8% distribution shift).\n"
-        "- **PatchTST_Lite** is the safety-critical choice: FN ≈ 0 across splits "
-        "(near-perfect closed-eye recall) at the cost of high false positives — ideal for "
-        "drowsiness detection in safety-critical BCI."
+        "across the distribution shift more reliably than uncalibrated models.\n"
+        + (f"- **{_best70['model']}** achieves the best single-split Macro-F1 "
+           f"({_best70['macro_f1']:.4f} on 70/15/15).\n" if _best70 is not None else "")
+        + (f"- **{_best60_ml['model']}** is the most robust ML model on the hardest 60/20/20 split "
+           f"(Macro-F1 = {_best60_ml['macro_f1']:.4f}).\n" if _best60_ml is not None else "")
+        + "- All models struggle under severe concept drift; Macro-F1 values near 0.50 "
+        "indicate performance only marginally above the balanced-accuracy baseline."
     )
 
     # Recommendations table
+    # Build recommendations dynamically from actual results
+    _best_overall = mean_mf1.index[0]
+    _best_ml = mean_mf1[[m for m in mean_mf1.index if df_sum[df_sum["model"]==m]["type"].iloc[0]=="ML"]].index[0] if not mean_mf1.empty else "LogisticRegression"
     md_text("**Recommended Model Per Use Case:**")
     md_table(
         ["Use Case", "Model", "Reason"],
         [
-            ["Balanced accuracy (research)",  "EEGNet",           "Best single-split MacroF1, calibrated threshold, high AUC"],
-            ["Stable production ML",          "LogisticRegression","Most consistent across splits, fastest, best calibrated"],
-            ["Safety-critical (min FN)",      "PatchTST_Lite",    "FN≈0 across splits, AUC=0.864 on 70/15/15"],
-            ["Worst-case distribution shift", "GradientBoosting", "Wins hardest 60/20/20 split, lowest WF CV variance"],
-            ["Online/streaming BCI",          "EEGNet",           "<400 params, fast inference, electrode-aware"],
-            ["Temporal CV reliability",       "LogisticRegression","Best Walk-Forward CV mean MacroF1"],
+            ["Balanced accuracy (research)",  _best_overall,      f"Highest mean Macro-F1 ({mean_mf1.iloc[0]:.4f}), best AUC across splits"],
+            ["Stable production ML",          _best_ml,           "Most consistent ML model across splits, fast inference"],
+            ["Online/streaming BCI",          "EEGNet",           "~1.1K params, fast inference, electrode-aware architecture"],
+            ["Worst-case distribution shift", _best_ml,           "Best ML performance under severe concept drift"],
         ]
     )
 
@@ -2117,7 +2137,7 @@ def section_final_comparison(summary_rows_ml, summary_rows_dl):
             ["Preprocessing",        "✓ Bandpass + IQR",    "Bandpass 0.5–45 Hz + IQR cleaning preserves EEG integrity"],
             ["Class balance",        "✓ Adequate globally", "55% open / 45% closed globally; drifts at end"],
             ["Label quality",        "✓ Camera-verified",   "Eye state labels added by manual video annotation"],
-            ["Why EEGNet leads here","Architecture fit",     "Depthwise 2D convs match alpha-band Berger effect at O1/O2"],
+            ["Why EEGNet leads here","Architecture fit",     "Depthwise 2D convs match alpha-band Berger effect at O1/O2; ~1.1K params resist overfitting"],
         ]
     )
     md_text("---")
