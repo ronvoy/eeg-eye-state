@@ -1,0 +1,56 @@
+flowchart TD
+    %% ── DATA INGESTION & QUALITY ──────────────────────────
+    subgraph A["Data Ingestion & Quality"]
+        A1["Load EEG CSV\n14 electrodes · eyeDetection target"]
+        A2["Data Description\nStats, class balance"]
+        A3["Data Imputation\nMedian fill for missing values"]
+        A1 --> A2 --> A3
+    end
+
+    %% ── SIGNAL PREPROCESSING ─────────────────────────────
+    subgraph B["Signal Preprocessing"]
+        B1["Raw Data Visualisation\nClass balance · Correlation heatmap"]
+        B2["Bandpass Filter + IQR Clipping\nDelta to Gamma bands · 128 Hz"]
+        B3["Cleaned Data Visualisation\nBefore/after comparison plots"]
+        B4["Log-Normalisation Assessment\nSkewness & distribution check"]
+        B1 --> B2 --> B3 --> B4
+    end
+
+    %% ── FEATURE ENGINEERING & ANALYSIS ──────────────────
+    subgraph C["Feature Engineering & Analysis"]
+        C1["Feature Engineering\nBand power · stat moments · hemispheric asymmetry"]
+        C2["Frequency-Domain Analysis\nFFT · PSD (Welch) · Spectrogram"]
+        C3["Dimensionality Reduction\nLDA · t-SNE · UMAP"]
+        C1 --> C2 --> C3
+    end
+
+    %% ── ML MODELS ────────────────────────────────────────
+    subgraph D["Classical ML Models"]
+        D1["Time-Series Cross-Validation\n3 splits: 70/15/15 · 60/20/20 · 80/10/10"]
+        D2["KNN · LR · SVM · RF · GBM · XGBoost"]
+        D3["ML Metrics\nAcc · F1 · AUC · Confusion Matrix"]
+        D1 --> D2 --> D3
+    end
+
+    %% ── DL MODELS ────────────────────────────────────────
+    subgraph E["Deep Learning Models"]
+        E1["Sequence Windows\nSEQ_LEN=64 · BATCH=128"]
+        E2["LSTM · CNN-LSTM · EEGTransformer · EEGNet · PatchTST-Lite"]
+        E3["Ensemble Optimizer\nWeighted probability fusion · 3000 trials"]
+        E1 --> E2 --> E3
+    end
+
+    %% ── EVALUATION ───────────────────────────────────────
+    subgraph F["Final Evaluation"]
+        F1["Cross-Model Comparison\nAll splits · ranked by Macro-F1"]
+        F2["Best Model Selection\nHighest mean Macro-F1 across splits"]
+        F3["Output Plots\nAccuracy · AUC-ROC · Comparison charts"]
+        F1 --> F2 --> F3
+    end
+
+    %% ── GLOBAL FLOW ──────────────────────────────────────
+    A --> B --> C
+    C --> D
+    C --> E
+    D --> F
+    E --> F

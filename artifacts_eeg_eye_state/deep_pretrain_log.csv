@@ -1,5 +1,0 @@
-model,pretrain_loaded,checkpoint,reason,loaded_tensors
-CNN_BiLSTM_Attention,False,,not_requested,0
-EEGNet,False,,not_requested,0
-EEGNet_Plus,False,,not_requested,0
-TCFormer,False,,not_requested,0
