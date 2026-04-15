@@ -7,7 +7,7 @@
 
 **Submitted to:** 
 - Prof. Giuseppe Longo, 
-- Prof.ssa Roberta Siciliano (University of Naples Federico II)
+- Prof.ssa Roberta Siciliano
 
 **Report by:** 
 - Andrea Manzo
