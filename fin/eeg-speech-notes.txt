@@ -1,0 +1,1503 @@
+===============================================================================
+EEG EYE STATE CLASSIFICATION — SPOKEN PRESENTATION SCRIPT
+===============================================================================
+University of Naples Federico II · Data Mining & Machine Learning (2025/26)
+Andrea Manzo · Francesco Ventimiglia · Danilo Rodriguez · Rohan Baidya
+
+This file contains a rehearsal-ready spoken script for each of the 45 slides.
+Read it out loud. Adapt it. Time yourself — each slide takes 45 to 90 seconds
+on average. The total presentation is designed to run 35 to 45 minutes plus Q&A.
+
+Stage directions are in [brackets]. Pause cues are marked (pause).
+
+===============================================================================
+SLIDE 1 — TITLE
+===============================================================================
+
+[Walk to the center of the stage. Smile.]
+
+Good morning everyone, and thank you for being here.
+
+My name is [speaker name], and together with my teammates Andrea, Francesco,
+Danilo, and Rohan, we have been working on a project we call "EEG Eye State
+Classification Analysis." (pause)
+
+This is a study where we take a recording of brain electrical activity and
+try to teach a computer to tell — just from looking at the brain signals —
+whether the person's eyes were open or closed at that moment.
+
+We did this using a full toolkit of machine learning and deep learning
+methods. Over the next 45 slides, we will walk you through the data, the
+preprocessing, the features, the exploratory analysis, five classical
+machine learning models, five deep learning architectures, and finally
+a head-to-head comparison.
+
+This project was carried out under the supervision of Professor Giuseppe
+Longo and Professor Roberta Siciliano, whom we thank for their guidance.
+
+Let's get started.
+
+
+===============================================================================
+SLIDE 2 — PRESENTATION ROADMAP
+===============================================================================
+
+Before we dive into the data, let me give you a map of where we are going.
+
+We've divided the presentation into eight sections.
+
+Section one is about the dataset itself and how the electrodes are placed
+on the head. Section two walks through how we cleaned the raw signal.
+Section three explains the features we engineered. Section four is the
+biggest — our exploratory data analysis, looking at distributions,
+correlations, and frequency content.
+
+Then in section five we project the data into two dimensions so you can
+see the class structure. Section six covers our five machine learning
+models. Section seven covers the five deep learning architectures.
+
+And finally, section eight brings everything together: the final ranking,
+a decision matrix showing which algorithm is best for which situation,
+the problems we encountered, and our conclusions.
+
+Let's start with the data.
+
+
+===============================================================================
+SLIDE 3 — DATASET: UCI EEG EYE STATE
+===============================================================================
+
+The dataset we worked with is the UCI EEG Eye State dataset, published by
+Oliver Rösler in 2013.
+
+Here are the key numbers. We have 14,980 samples. They were recorded over
+117 seconds of continuous brain activity. The sampling rate is 128 Hz —
+meaning 128 measurements per second. And there are 14 EEG channels.
+
+The class balance is mild: 55.1% of samples were recorded with eyes open,
+and 44.9% with eyes closed.
+
+The hardware matters a lot here. This data was recorded with an Emotiv
+EPOC headset. That is a consumer-grade, wireless, 14-channel device using
+saline-soaked felt electrodes — not the research-grade gel electrodes you
+would find in a clinical setting. The signal quality is good enough for
+basic research, but the signal-to-noise ratio is lower, and as we'll see,
+the raw data contains voltage spikes up to 715 thousand microvolts — that
+is four orders of magnitude larger than real brain activity.
+
+The labelling was done manually, by watching a synchronised video recording.
+The target variable is called eyeDetection, and it's binary: zero for open,
+one for closed.
+
+Why does this dataset matter? It is the canonical benchmark for drowsiness
+detection and passive brain-computer interfaces. Over 200 peer-reviewed
+papers have used it.
+
+
+===============================================================================
+SLIDE 4 — ELECTRODE POSITIONING: THE 10-20 SYSTEM
+===============================================================================
+
+To understand what each channel measures, we need to talk about how
+electrodes are placed on the head.
+
+The international standard is called the 10-20 system. It was adopted in
+1958, and it's used universally in EEG research.
+
+The idea is simple. You measure the distance between four anatomical
+landmarks — the bridge of the nose, the base of the skull at the back,
+and the two points in front of the ears. Then you place electrodes at
+ten percent or twenty percent of those distances. That's where the name
+comes from.
+
+Every electrode has a name following a convention. The letter tells you
+the lobe: F for frontal, C for central, T for temporal, P for parietal,
+O for occipital. The number tells you the hemisphere: odd numbers go on
+the left, even numbers on the right. Z means midline.
+
+On the head diagram here, you can see our 14 electrodes colour-coded by
+region. Six frontal electrodes in red at the top. Two central in orange.
+Two temporal in blue on the sides. Two parietal in green. Two occipital
+in purple at the back.
+
+The beauty of the 10-20 system is that F7 on one person is anatomically
+equivalent to F7 on another person, regardless of head size. That makes
+EEG research reproducible across subjects and labs.
+
+
+===============================================================================
+SLIDE 5 — ELECTRODE FUNCTIONAL REGIONS
+===============================================================================
+
+Now let me tell you what each brain region actually does, and why it
+might matter for detecting eye state.
+
+The frontal region has six of our fourteen channels — nearly half. These
+electrodes measure executive control, attention, working memory, and
+voluntary motor planning. For our task, this is where the brain decides
+to close the eyes. It's also where we pick up electrical activity from
+eye-blink muscles. We'll see later that the Random Forest model ranks
+F7, F8, and AF3 as its most important features.
+
+The central region, with FC5 and FC6, captures motor preparation — the
+so-called mu rhythm at 8 to 13 Hz over the sensorimotor cortex.
+
+The temporal region with T7 and T8 handles auditory processing and face
+or voice recognition. Less directly relevant for eye state.
+
+Parietal — P7 and P8 — handles spatial attention. Alpha power increases
+here when eyes close, contributing to the Berger effect we'll see later.
+
+And the occipital region with O1 and O2 is the primary visual cortex.
+Classically, this is where the Berger effect is strongest. But
+interestingly — and we'll come back to this — in our data, the occipital
+channels rank only mid-table in feature importance. The hardware quality
+has shifted the discriminative signal toward the frontal channels.
+
+
+===============================================================================
+SLIDE 6 — TARGET VARIABLE AND CLASS DISTRIBUTION
+===============================================================================
+
+This slide has two parts, and the second part is probably the most
+important single fact in the entire presentation.
+
+First, the simple class count. 8,257 samples with eyes open, 6,723 with
+eyes closed. That is a 55-to-45 split — mild imbalance, which means we
+don't need heavy resampling techniques. Simple class weighting will do.
+
+Now here is the crucial observation. If we break the recording into
+quartiles by time, look what happens. In the first quartile, about 50%
+of samples are closed. In the second quartile, it peaks at 62%. In the
+third quartile, it drops to 41%. And in the fourth quartile, only 24%
+of samples are closed.
+
+If we zoom into the very last 15% of the recording, only 8% of samples
+are eyes-closed. (pause)
+
+This is called temporal concept drift. The statistical distribution of
+the target variable changes systematically over the course of the
+recording. And it has a massive implication: if we split the data
+chronologically — train on the first 70%, test on the last 15% — the
+test set has a completely different class distribution from the
+training set.
+
+This single fact explains why every model we tested has a strange and
+sometimes poor test AUC. The models learn the distribution they saw
+during training, and the test distribution is different.
+
+We mitigate this with Macro-F1 as our primary metric, balanced class
+weights, and decision thresholds tuned on cross-validation.
+
+
+===============================================================================
+SLIDE 7 — PREPROCESSING STEP 1: IQR SPIKE REMOVAL
+===============================================================================
+
+Alright, let's clean this signal.
+
+The raw Emotiv data contains voltage spikes up to 715 thousand microvolts.
+Real brain activity is in the range of plus or minus 50 microvolts. So
+we are looking at noise that is four orders of magnitude larger than
+the signal we want. We have to remove it.
+
+Why do these spikes happen? Several reasons. An electrode might briefly
+lose contact with the skin — that gives you a large DC step. Cable
+movement creates triboelectric discharge. Muscle contractions produce
+broadband bursts. And eye blinks themselves produce deflections on the
+frontal channels around 200 microvolts — actually useful, but we need
+to decide whether to keep them.
+
+Our tool is the Interquartile Range method. We compute Q1 and Q3 for
+each channel, take the IQR, and reject any sample where the distance
+from the median exceeds three times the IQR.
+
+Note: we use 3.0, not the textbook 1.5. Why? Because 1.5 would also
+remove legitimate high-amplitude physiological events like alpha bursts
+and K-complexes. 3.0 is conservative and targets only clear hardware
+failures.
+
+If any channel flags a row, we drop the entire row. This keeps the 14
+channels aligned in time.
+
+The result is dramatic. Before: skewness up to 78, kurtosis up to 6,000.
+After: skewness below 2, kurtosis below 12 on every channel. We removed
+1,374 rows, which is 9.2% of the data. We kept 90.8%.
+
+
+===============================================================================
+SLIDE 8 — BUTTERWORTH BANDPASS FILTER: THEORY
+===============================================================================
+
+IQR removed the spikes. But we still have two problems: slow DC drift
+below 0.5 Hz, and high-frequency noise above 45 Hz. For that, we use a
+Butterworth bandpass filter.
+
+A Butterworth filter is characterised by having a maximally flat passband.
+That means within the frequencies we want to keep, the filter does not
+distort the amplitude. We used fourth-order, passband from 0.5 to 45 Hz,
+applied with filtfilt for zero phase distortion.
+
+Why Butterworth and not something else? There were three candidates.
+Chebyshev has a sharper roll-off, but it ripples in the passband — which
+would distort our band-power features. Elliptic is even sharper but
+ripples in both bands — worse still. Butterworth is perfectly flat. For
+EEG, amplitude fidelity matters more than having a razor-sharp cutoff.
+
+What gets removed? Below 0.5 Hz, we eliminate DC drift caused by skin
+impedance changes, sweat, and head movement. That is not neural activity.
+Above 45 Hz, we remove 50 Hz European power-line interference, EMG
+muscle contamination, and digital aliasing.
+
+What is preserved? All five EEG bands: Delta at 0.5 to 4 Hz, Theta at
+4 to 8, Alpha at 8 to 12, Beta at 12 to 30, and low Gamma at 30 to 45.
+
+Technically, full gamma extends to 100 Hz, but Nyquist at 64 Hz and
+line noise at 50 Hz constrain us to low gamma.
+
+
+===============================================================================
+SLIDE 9 — BUTTERWORTH BANDPASS: EFFECT ON THE SIGNAL
+===============================================================================
+
+Let me show you this in action on channel O1, the occipital electrode.
+
+Look at the top panel. This is the signal AFTER IQR spike removal but
+BEFORE the bandpass filter. You can see it ranges from about 1,060 to
+1,135 microvolts. The mean is around 1,098 microvolts. That is the DC
+offset. It looks noisy, but the real neural oscillations are buried
+under this slow baseline drift.
+
+Now look at the bottom panel. Same channel, same time window, but now
+AFTER the bandpass filter. The range has collapsed to plus or minus
+25 microvolts. The mean is zero. And suddenly, you can clearly see the
+oscillatory structure of brain activity.
+
+This is the signal our classifiers will actually see.
+
+Three analysis cards below summarise: the top panel is spike-free but
+drift-dominated. The bottom panel reveals the neural oscillation. The
+filter introduces zero phase distortion because we used filtfilt, and
+attenuation at the stopband edges is around 36 dB at 0.25 Hz and 24 dB
+at 55 Hz — clean passband for physiological bands.
+
+
+===============================================================================
+SLIDE 10 — WHY LOG-NORMALIZATION WAS REJECTED
+===============================================================================
+
+Here is a small methodological story worth telling.
+
+We tested a third preprocessing step. Log-normalization. Many signal
+processing pipelines apply a log transform to compress dynamic range
+and reduce skewness. It's a common default.
+
+The formula is x_new equals sign of x times the logarithm of one plus
+the absolute value of x. It is supposed to symmetrise heavy-tailed
+distributions.
+
+So we measured it. On all 14 channels. And here is what we found: the
+log transform WORSENED skewness on every single channel.
+
+Take channel AF3 as an example. Before the log, skewness was minus 0.12,
+which is nearly Gaussian. After the log, it became minus 0.94 — much
+worse.
+
+Why? Because our post-bandpass EEG is zero-mean and bipolar. The log
+function expands values near zero and compresses large magnitudes.
+That's the opposite of what a Gaussian-like signal needs. Log transform
+artificially splits the distribution into two clumps around plus and
+minus log of one.
+
+Decision: we rejected log-normalization.
+
+The lesson is: never apply a transform reflexively. Always measure.
+We almost made things worse.
+
+
+===============================================================================
+SLIDE 11 — FEATURE ENGINEERING: HEMISPHERIC ASYMMETRY
+===============================================================================
+
+Now let's talk about the features we engineered on top of the raw signal.
+
+The first family is hemispheric asymmetry. The brain is functionally
+lateralised. Research going back to Davidson in 1992 shows that the
+difference between left and right frontal alpha correlates with emotional
+valence. And reduced hemispheric symmetry is a biomarker for fatigue
+and cognitive load.
+
+For each of 7 symmetric electrode pairs, we computed left minus right.
+Then for each pair, we ran a two-sample t-test comparing the open and
+closed distributions.
+
+The results are in the table on the right. Only two pairs are
+statistically significant at alpha 0.05:
+
+F7 minus F8 — p-value 0.018. The mean flips sign: positive 1.87 when
+eyes are open, negative 0.94 when closed. Strong lateral frontal
+asymmetry linked to eye state.
+
+And P7 minus P8 — p-value 0.034. The sign also flips. This reflects
+parietal attention redistribution when visual input ceases.
+
+The other five pairs are not individually discriminative. Despite this,
+we kept all 7 asymmetry features in our feature set. Weakly significant
+features may still contribute to multivariate models through
+interactions. Univariate p-values are too conservative a filter.
+
+
+===============================================================================
+SLIDE 12 — FEATURE ENGINEERING: BAND POWER AND BERGER EFFECT
+===============================================================================
+
+The second family of features is frequency band power.
+
+For each channel, we computed the average power in each of five bands,
+using Welch's method. The key question: how does band power differ
+between eye-open and eye-closed?
+
+Here is the closed-over-open ratio for each band:
+
+Delta at 1.26 — the biggest ratio.
+Theta at 1.03 — basically unchanged.
+Alpha at 1.13 — this is the Berger effect signature.
+Beta at 1.06 — slight increase.
+Gamma at 0.98 — basically unchanged.
+
+So let me tell you about Berger. Hans Berger invented EEG in 1924. He
+published his discovery of the alpha rhythm in 1929. He noticed that
+alpha waves at 8 to 12 Hz are suppressed when you open your eyes, and
+they rebound dramatically when you close your eyes. This happens
+because the thalamocortical loop between the LGN and the primary visual
+cortex synchronises when it has no visual input to process.
+
+In published research-grade EEG, the alpha closed-over-open ratio is
+typically 2 to 5 times. Our ratio is 1.13.
+
+Why is our signal so weak? Three reasons. Consumer-grade saline
+electrodes have higher impedance. The subject was not instructed to
+sustain closure and may have just been blinking. And the referential
+montage used by Emotiv reduces signal-to-noise ratio compared to the
+bipolar montage used in research.
+
+The impact on our models: the "easy" physiological signal is muted. Our
+classifiers cannot rely on a single strong alpha spike. They have to
+exploit subtle multi-channel interactions.
+
+
+===============================================================================
+SLIDE 13 — EDA: CLASS BALANCE AND BERGER OVERVIEW
+===============================================================================
+
+This is a brief summary slide that consolidates what we've just said
+visually, before we go deeper.
+
+On the left you see the class balance bar chart — 8,257 open, 6,723
+closed, the mild 55-to-45 imbalance.
+
+On the right, the five-band power chart. Blue bars are eyes open. Red
+bars are eyes closed. You can see that in every band, the red bar is
+higher than the blue bar. That is, power is higher across all bands
+when eyes are closed. Delta shows the biggest absolute increase. Alpha
+shows the Berger signature.
+
+The insight box summarises: alpha ratio 1.13 is the signal our models
+must exploit. Delta ratio 1.26 is the largest absolute effect. From
+now on, every EDA slide will deepen one of these two stories.
+
+
+===============================================================================
+SLIDE 14 — EDA: BOX PLOTS BEFORE AND AFTER
+===============================================================================
+
+Let me show you the most dramatic before-and-after in the entire report.
+
+On the left are box plots of the 14 channels, computed on raw signal
+with winsorisation at the first and ninety-ninth percentile so you can
+actually see them. Notice that the median lines are crammed against
+zero while the whiskers extend tens of thousands of microvolts. The
+interquartile boxes are almost invisible. Per-channel ranges vary by
+five orders of magnitude. F7 ranges to 700 thousand microvolts; T7
+only 50. This is noise, not physiology.
+
+Now look at the right panel. After IQR plus bandpass. The boxes become
+clearly visible. All channels now have IQR ranges between 5 and 25
+microvolts. The medians sit at zero. The whiskers are symmetric.
+Residual outliers are real physiological events — eye blinks on
+frontal channels — not hardware failures.
+
+This single visualisation justifies all of our preprocessing choices.
+Five orders of magnitude of noise, reduced to physiologically valid
+range, without throwing away real signal.
+
+
+===============================================================================
+SLIDE 15 — EDA: HISTOGRAMS BY EYE STATE
+===============================================================================
+
+The histograms show the distribution of voltage values on each of the
+14 channels, with blue for eyes open and red for eyes closed overlaid.
+
+Three things to observe.
+
+First, the distribution shapes. All 14 channels are approximately
+Gaussian, centred at zero microvolts after preprocessing. Skewness is
+less than 0.3 in absolute value on 10 of 14 channels, and less than 1
+on all 14. Our signal is very well-behaved.
+
+Second, the overlap. The blue and red distributions overlap heavily —
+around 85 to 95 percent — on most channels. That is bad news for a
+classifier that looks at one channel at a time. No single channel
+tells you the eye state.
+
+Third, where separation does exist, it is subtle. On F7 and F8 — the
+lateral frontal channels — the closed distribution is slightly wider,
+indicating higher variance when eyes close. On O1 and O2 — the
+occipital channels — there is a subtle right-shift during eye closure
+corresponding to increased alpha amplitude.
+
+The takeaway: multivariate models are required.
+
+
+===============================================================================
+SLIDE 16 — EDA: VIOLIN PLOTS
+===============================================================================
+
+Violin plots combine a box plot with a kernel density estimate. Where
+a box plot shows you five summary statistics, a violin plot shows you
+the full probability density.
+
+Why does this matter? Because it answers a question box plots cannot:
+is the distribution unimodal, bimodal, or heavy-tailed?
+
+In our data, every channel is unimodal and approximately symmetric.
+That's a strong statement. It justifies using linear models — Logistic
+Regression, Linear Discriminant Analysis — as reasonable baselines.
+If we saw bimodal violins, we would have inferred there were hidden
+sub-populations and a single linear boundary could not work.
+
+Subtle differences between open and closed: the closed violins on O1
+and O2 are slightly fatter in the middle, meaning more concentration
+of low-amplitude samples. That is consistent with alpha bursts creating
+amplitude structure. Frontal channels AF3 and F7 show more extreme
+tails when closed — eye-blink residuals.
+
+No bimodality anywhere. A single Gaussian prior per channel is
+defensible.
+
+
+===============================================================================
+SLIDE 17 — CORRELATION HEATMAP: RAW SIGNAL (PROBLEMATIC)
+===============================================================================
+
+This slide should make you concerned.
+
+What you are looking at is the correlation matrix computed on raw
+signal, winsorised at the first and ninety-ninth percentile just to
+make the colours readable. Even after clipping, many cells are
+saturated red — correlations above 0.8.
+
+Why so many high correlations? Three reasons.
+
+First, shared spikes. When one electrode pops, multiple channels
+register the spike simultaneously. That creates artificial covariance.
+
+Second, the common mode reference. All 14 channels share the same
+reference electrode — CMS at location P3. When a large drift hits the
+reference, every channel records the subtracted version, and that
+creates correlation across all derivations.
+
+Third, DC offset. Channel means co-vary slowly due to environmental
+factors like skin impedance and temperature, and this inflates Pearson
+correlation on raw data.
+
+The danger is this: if we trained a classifier on this raw matrix, it
+would learn to exploit artifacts rather than physiology. It would
+perform beautifully on this data and fail on any other recording.
+
+Raw data lies. Preprocessing reveals truth.
+
+
+===============================================================================
+SLIDE 18 — CORRELATION HEATMAP: AFTER PREPROCESSING
+===============================================================================
+
+Same matrix, same channels, but computed after IQR plus bandpass.
+
+Correlations drop globally to physiologically realistic levels.
+
+Let me walk you through what remains. AF3 and AF4 at 0.86 — that is
+bilateral frontopolar coupling, shared cognitive state. F7 and F8 at
+0.87 — lateral frontal, mirrored executive activity. F3 and F4 at
+0.76 — bilateral frontal. These high correlations are expected and
+neuroanatomically justified.
+
+Newly revealed, and this is interesting: O1 and O2 at only 0.58,
+P7 and P8 at 0.44. Bilateral posterior pairs are more independent
+than frontal pairs. And T7 with T8 at 0.25 — the temporal lobes are
+largely independent, because the left handles language and the right
+handles face recognition. Different functions, different patterns.
+
+Cross-region correlations also make sense. Frontal with occipital
+below 0.2 — no direct anatomical connection. Frontal with temporal
+around 0.3 to 0.5 — reflects the fronto-temporal cognitive networks
+described in neuroscience textbooks.
+
+The fact that our corrected heatmap matches published EEG atlases is
+validation. Our preprocessing is correct.
+
+
+===============================================================================
+SLIDE 19 — COLLINEARITY: WHY PAIRS STAY COUPLED
+===============================================================================
+
+A natural question after the previous slide: F7 and F8 still correlate
+at 0.87. Is that a problem?
+
+The answer is no, and here is why.
+
+That correlation is physiological, not artifactual. There's a
+neuroanatomical reason and a functional reason.
+
+Anatomically, the corpus callosum has over 200 million axons directly
+connecting the two hemispheres. Frontal cortex activity is tightly
+coupled bilaterally during routine cognition. Functionally, both
+frontal lobes participate in the same executive networks — attention,
+inhibition, working memory — and they receive common top-down input
+from the anterior cingulate and basal ganglia.
+
+The correlation is real information, not redundancy. If we removed one
+of the pair, we would lose the ability to compute the asymmetry
+features that turned out to be discriminative.
+
+Model-specific implications. Some models are sensitive to collinearity:
+Logistic Regression becomes unstable when correlations exceed 0.9,
+LDA's covariance matrix becomes near-singular, linear SVMs diverge.
+Other models are robust: Random Forest randomly samples square-root-of-p
+features per split and implicitly breaks collinearity. Gradient
+boosting explores alternative features. Neural networks absorb
+redundancy via distributed representations.
+
+Our solution: use L2 regularisation on LogReg and SVM. Tree models
+handle it natively. No feature is dropped.
+
+
+===============================================================================
+SLIDE 20 — SPECTRAL ANALYSIS: FFT THEORY
+===============================================================================
+
+Now we transition from the time domain to the frequency domain. This
+is crucial for EEG because brain activity is fundamentally oscillatory.
+
+The Fast Fourier Transform is the tool. The core idea is that any
+finite signal can be expressed as a sum of sinusoids. FFT computes
+the amplitude and phase of each one.
+
+The formula is X of k equals the sum over n of x of n times the complex
+exponential of minus j 2 pi k n over N. Don't worry about the formula
+too much. What matters is: FFT gives you the strength of every
+frequency component in your signal.
+
+The algorithm used in practice is Cooley-Tukey, published in 1965. It
+reduces computational complexity from order N-squared to order N log N.
+That is why real-time spectral analysis became possible.
+
+For our data: sampling rate is 128 Hz, so the Nyquist frequency is 64
+Hz. That means we can accurately measure frequencies up to 64 Hz and
+no higher. We use a Hann window to reduce spectral leakage.
+
+Why is frequency analysis right for EEG? Because different brain states
+are characterised by different frequency bands, not different
+time-domain amplitudes. A drowsy brain and an alert brain look similar
+in time, but radically different in frequency.
+
+
+===============================================================================
+SLIDE 21 — FFT RESULTS: 14 CHANNELS
+===============================================================================
+
+This is the FFT applied to all 14 channels. Log amplitude on the
+y-axis, frequency on the x-axis, and the shaded vertical bands mark
+the five classical EEG bands — Delta, Theta, Alpha, Beta, Gamma.
+
+What do we observe?
+
+First, a common 1/f shape across all channels. Amplitude decreases
+roughly in proportion to 1 divided by frequency. This is the classic
+pink-noise signature of cortical activity. Our preprocessing did not
+distort this physiological profile — validity check passed.
+
+Second, channel similarity. Frontal channels AF3, F7, and F3 share a
+steeper slope. Occipital channels O1 and O2 show a small bump in the
+alpha band from 8 to 12 Hz. That bump is the only visible deviation
+from pure 1/f. That bump IS the Berger effect.
+
+Now, what is absent, and this is important. There is no sharp,
+narrow-band peak anywhere. In a healthy adult at rest with eyes
+closed, published research EEG typically shows a prominent alpha peak
+rising 5 to 10 times above the 1/f background. Our occipital bump is
+less than 2 times.
+
+This weakness is a major reason our classification is harder than on
+research-grade datasets.
+
+
+===============================================================================
+SLIDE 22 — POWER SPECTRAL DENSITY: WELCH'S METHOD
+===============================================================================
+
+This is our most informative spectral plot. It uses Welch's method,
+which is a refinement of basic FFT.
+
+The procedure: split the signal into overlapping segments — 50%
+overlap, with a Hann window. Compute the FFT of each segment, square
+the magnitude to get power. Then average across segments. This
+averaging reduces the variance of the spectral estimate.
+
+The result is a much smoother, more reliable PSD. A single FFT is
+noisy; many averaged are smooth.
+
+What the chart shows: the closed-eye PSD shown in red sits clearly
+above the open-eye PSD shown in blue. This is visible across the
+Delta, Theta, Alpha, and Beta bands. It is most prominent on
+occipital and parietal channels. And the separation is largest in the
+4 to 15 Hz range.
+
+This confirms, visually, what we measured numerically on slide 12:
+higher power when eyes are closed, with the biggest effect in the
+lower frequencies.
+
+
+===============================================================================
+SLIDE 23 — SPECTRAL ANALYSIS: SUMMARY
+===============================================================================
+
+Four takeaways that will guide every subsequent modelling decision.
+
+Takeaway one: the 1/f background is confirmed across all 14 channels.
+That's our validity check. Preprocessing did not destroy physiology.
+
+Takeaway two: the alpha bump is weak. A ratio of 1.13 when literature
+reports 2 to 5 times. Classification will be harder here.
+
+Takeaway three: Delta actually dominates the energy. The Delta band
+has the largest absolute power — about 60 microvolts-squared on
+average — and the largest closed-over-open ratio of 1.26. Low
+frequencies matter more than we expected.
+
+Takeaway four: multi-channel integration is required. No single channel
+carries strong discriminative information alone. This favours deep
+learning approaches that can learn joint spatial-spectral patterns.
+
+These four takeaways actually predict our final result: EEGNet, which
+explicitly models joint spatial-spectral patterns with small capacity,
+outperformed every other model.
+
+EDA is not just pretty pictures. It generates testable predictions
+about which models will work. And in our case, those predictions were
+correct.
+
+
+===============================================================================
+SLIDE 24 — DIMENSIONALITY REDUCTION OVERVIEW
+===============================================================================
+
+We now have a 116-dimensional feature vector per sample: 14 raw channels,
+14 rolling means, 14 rolling standard deviations, 70 FFT features, and
+4 band ratios.
+
+To visualise the class structure, we need to project 116 dimensions
+down to 1, 2, or 3. We use three complementary methods.
+
+Linear Discriminant Analysis — LDA — is supervised and linear. It finds
+the single direction that maximises the ratio of between-class scatter
+to within-class scatter. For binary classification, it produces exactly
+one discriminant axis.
+
+t-SNE is unsupervised and non-linear. It preserves only local
+neighbourhood structure. Great for revealing clusters.
+
+UMAP is also unsupervised and non-linear, but it preserves both local
+and global structure. It's more scalable and more deterministic than
+t-SNE.
+
+We measured clustering quality with three metrics: Silhouette, where
+higher is better; Davies-Bouldin, where lower is better; and
+Calinski-Harabasz, where higher is better.
+
+Verdict: LDA wins on all three metrics. This makes sense — only LDA
+uses the class labels during projection. Supervised dominates
+unsupervised when classes exist.
+
+
+===============================================================================
+SLIDE 25 — LDA DEEP DIVE
+===============================================================================
+
+Let me explain LDA in a bit more detail because it's the winner.
+
+Fisher's criterion — the mathematical objective of LDA — asks: can I
+find a direction w in the high-dimensional space such that when I
+project the data onto w, the two classes are maximally separated?
+
+Formally, the objective function J(w) is the ratio of w-transpose S_B
+w, the between-class scatter, over w-transpose S_W w, the within-class
+scatter. Maximise this, and you get the most discriminative axis.
+
+There is a closed-form solution: w is an eigenvector of S_W-inverse
+S_B. For binary classification, you get exactly one direction.
+
+Looking at our chart: the x-axis is the LD1 projection value. The
+y-axis is sample density, estimated by a kernel density smoother. Blue
+is eye-open, red is eye-closed. The two peaks are displaced by about
+1.5 standard deviations. Modest but real separation.
+
+The Silhouette score of 0.1556 tells us: positive silhouette means
+points are, on average, closer to their own class centroid than to
+the other. A linear boundary IS separating the classes, just with
+significant overlap.
+
+And that is why Logistic Regression — a linear model — is our best
+machine learning baseline. The LDA result predicted it.
+
+
+===============================================================================
+SLIDE 26 — T-SNE DEEP DIVE
+===============================================================================
+
+t-SNE stands for t-distributed Stochastic Neighbour Embedding. It's
+the most popular non-linear dimensionality reduction method.
+
+The core idea: preserve pairwise similarities between nearby points,
+and throw away information about far-apart points.
+
+The algorithm has two steps. In the high-dimensional space, compute
+pairwise similarity probabilities using a Gaussian kernel — the
+perplexity parameter controls the kernel width, typically 30. In the
+low-dimensional space, place points to minimise the KL divergence
+between the high-dimensional and low-dimensional similarities. The
+low-dim similarity uses a heavy-tailed t-distribution, which prevents
+the so-called crowding problem.
+
+Our parameters: perplexity 30, learning rate auto, initialisation by
+PCA for determinism.
+
+What does the plot show? Red and blue points overlap heavily. There
+are small local sub-clusters, but they do not correspond to class
+labels. This tells us that class information is NOT carried by local
+feature-space neighbourhoods.
+
+Important caveats for any t-SNE plot. Results vary with random seed
+and perplexity. Never interpret cluster sizes or inter-cluster
+distances as meaningful. t-SNE is a visualisation tool, not an
+analysis tool.
+
+
+===============================================================================
+SLIDE 27 — UMAP DEEP DIVE
+===============================================================================
+
+UMAP — Uniform Manifold Approximation and Projection — is the modern
+alternative to t-SNE, published in 2018.
+
+The theoretical foundation is quite deep. UMAP assumes that data lies
+on a Riemannian manifold. It constructs a fuzzy simplicial complex in
+high dimensions, then finds the low-dimensional embedding that best
+preserves that topology.
+
+The algorithm has three steps. Build a k-nearest-neighbour graph in
+high dimensions, default k equals 15. Assign fuzzy edge weights based
+on local connectivity. Optimise the low-dimensional layout via
+cross-entropy minimisation.
+
+Three advantages over t-SNE. First, UMAP preserves global structure,
+so inter-cluster distances are meaningful. Second, it is deterministic
+given a seed — the result is reproducible. Third, it scales to
+millions of points, whereas t-SNE is order n-squared.
+
+What we see in the plot: slightly better visual separation than t-SNE,
+Silhouette 0.065 versus 0.055, with a thin gradient between classes.
+This is consistent with eye state being a continuous variable rather
+than a sharp dichotomy. Makes physiological sense too — eye closing
+and opening is a gradual process in real life.
+
+Conclusion across all three dimensionality reduction methods: class
+structure in our data is weak. Supervision is essential.
+
+
+===============================================================================
+SLIDE 28 — MACHINE LEARNING: METHODOLOGY
+===============================================================================
+
+We are now entering the machine learning section. Five classical
+algorithms: Logistic Regression, SVM with RBF kernel, Random Forest,
+Gradient Boosting, and XGBoost.
+
+Our experimental protocol. We used three train-validate-test splits,
+all chronological, no shuffling. 60/20/20, 70/15/15, 80/10/10. Running
+all three lets us check stability across splits.
+
+Why chronological? Because of the temporal concept drift we established
+on slide 6. The last 15% of the recording has a radically different
+class distribution. Random shuffling would destroy this signal and
+give misleadingly optimistic results.
+
+Class imbalance was handled two ways. First, balanced class weights.
+Second, decision thresholds were optimised on the validation set by
+grid search from 0.1 to 0.9 in steps of 0.05.
+
+Our primary metric is Macro-F1 — the average of the F1 scores for the
+open and closed classes. Unlike accuracy, Macro-F1 weighs both classes
+equally. That is robust to the imbalanced test partition.
+
+Secondary metrics: accuracy, which is inflated by imbalance and
+treated with caution; Binary-F1 on the closed class, which tracks
+minority-class quality; and AUC-ROC, which is threshold-independent.
+
+One important caveat about AUC. Because test priors differ from train,
+AUC can invert — drop below 0.5 — when models rank correctly on CV
+but reverse on test. This is a hallmark of concept drift, and we will
+see it happen.
+
+
+===============================================================================
+SLIDE 29 — LOGISTIC REGRESSION
+===============================================================================
+
+Algorithm one of five: Logistic Regression. And as you'll see, this
+ended up being the best of the classical machine learning models.
+
+The model is simple. P of y equals 1, given x, equals the sigmoid of
+w-transpose x plus b. The sigmoid is 1 over 1 plus e to the minus z.
+The loss function is binary cross-entropy: minus the sum over samples
+of y log p plus one minus y log one minus p.
+
+This loss function is convex — meaning there is a unique global
+minimum. We use the L-BFGS solver, which is efficient.
+
+Hyperparameters we used. L2 penalty, also known as Ridge regularisation.
+C equals 1, the inverse regularisation strength. Balanced class
+weights. Maximum iterations 1000.
+
+Results in the table. On the 60/20/20 split, Macro-F1 was 0.478. On
+70/15/15, 0.454. On 80/10/10, 0.464. Mean across splits: 0.4665. That
+is the best mean Macro-F1 of any classical ML model.
+
+Why did it win? Three reasons. First, lowest variance across splits —
+standard deviation of only 0.013. That means Logistic Regression is
+the most STABLE model under temporal drift. Second, L2 regularisation
+damps the coefficients of collinear frontal features. Third, balanced
+class weights force the decision boundary away from the majority class.
+
+Why is AUC so low? Because the train-test class reshuffling inverts
+the learned ranking. Macro-F1 survives threshold tuning. AUC does not.
+
+Best for: production systems requiring interpretability, fast
+inference, calibrated probabilities, and stability under distribution
+shift.
+
+
+===============================================================================
+SLIDE 30 — SVM WITH RBF KERNEL
+===============================================================================
+
+Algorithm two of five: Support Vector Machine with a Gaussian RBF kernel.
+Competitive but less stable than Logistic Regression.
+
+The SVM is a maximum-margin classifier. In its dual form, the decision
+function is the sum over training points of alpha-i times y-i times
+K of x-i and x, plus a bias term. The magic is in K, the kernel.
+
+The RBF kernel is the Gaussian kernel: K of x-i and x-j equals the
+exponential of minus gamma times the squared distance between them.
+This implicitly maps the data to an infinite-dimensional feature
+space. In that space, the SVM can fit any continuous decision boundary.
+
+Optimisation is done by quadratic programming. Convex, but memory scales
+as n-squared to n-cubed, making SVM impractical for more than about
+100,000 samples.
+
+Our hyperparameters. Kernel RBF. C equals 1. Gamma set to "scale",
+which is 1 divided by n-features times the variance of X. Probability
+equals true so we can compute AUC via Platt scaling. Class weight
+balanced.
+
+Results. Mean Macro-F1 across splits: 0.4233. That's lower than
+Logistic Regression's 0.4665.
+
+Why did SVM underperform? The RBF kernel essentially MEMORISES the
+local curvature of the training distribution. When concept drift shifts
+the test distribution, the learned curvature no longer applies. High
+variance across splits — Macro-F1 ranged from 0.389 to 0.480.
+
+When does SVM shine? On the 80/10/10 split it hit 0.92 accuracy.
+When train and test are temporally close, the non-linear boundary
+captures real structure.
+
+Best for: smaller datasets with stationary distributions, where
+non-linear separation is needed and top accuracy matters more than
+stability.
+
+
+===============================================================================
+SLIDE 31 — RANDOM FOREST
+===============================================================================
+
+Algorithm three of five: Random Forest. An ensemble of 200 decorrelated
+decision trees.
+
+The prediction rule is majority vote across the 200 trees. Each tree
+is trained on a bootstrap sample of rows — sampled with replacement.
+At each node, the tree considers only the square-root of the total
+feature count — not all 14 channels. And it splits using Gini impurity
+minimisation. Gini equals 1 minus the sum over classes of p-class
+squared.
+
+The key property is that bagging plus random feature selection
+DECORRELATES the trees. Bagging reduces variance; feature randomness
+breaks collinearity. This is why RF handles correlated features
+natively — something Logistic Regression cannot do without
+regularisation.
+
+Hyperparameters. 200 estimators. Max depth none, so trees grow to
+purity. Minimum 2 samples per split. Balanced class weights.
+
+Random Forest also provides feature importance. And as we'll see on
+slide 33, F7, F8, FC5, AF3, and AF4 dominate — all lateral frontal
+channels. These pick up eye-blink EMG artifacts, which correlate with
+eye state. The model has found that blinks are a strong proxy.
+
+Results. Mean Macro-F1 across splits: 0.4311. Rank 6 overall.
+
+Why competitive but not winning? Pluses: handles collinearity,
+no scaling needed, built-in variance reduction. Minuses: trees grown
+to purity overfit the training distribution. Bagging reduces variance
+but not bias against distribution shift.
+
+Best for: tabular data with heterogeneous features, when interpretability
+via feature importance is required, and when training time is not
+critical.
+
+
+===============================================================================
+SLIDE 32 — GRADIENT BOOSTING AND XGBOOST
+===============================================================================
+
+Algorithms four and five: Gradient Boosting and XGBoost. Two boosting
+ensembles on one slide, because they share the core principle.
+
+The shared principle is sequential additive model construction. At
+each step, F-m of x equals F-m-minus-1 of x plus eta times h-m of x,
+where h-m is a new tree that fits the NEGATIVE GRADIENT of the loss
+evaluated at the previous ensemble.
+
+Each new tree corrects the previous ensemble's residual errors. The
+learning rate eta — shrinkage — controls how much each tree contributes.
+
+Contrast with Random Forest: RF trees are INDEPENDENT and grown in
+parallel. Gradient boosting trees are SEQUENTIAL and cumulatively
+correct errors.
+
+On the left: scikit-learn's Gradient Boosting. Configuration: 200
+trees, learning rate 0.1, max depth 5. Mean Macro-F1 across splits:
+0.4723. Rank 4 overall. The key observation: LOWEST variance of any
+model — standard deviation of Macro-F1 is only 0.038. The depth-5
+constraint prevents overfitting to spikes. Best for stable benchmarks.
+
+On the right: XGBoost. Same configuration plus scale-pos-weight for
+imbalance. Adds L1 and L2 regularisation on leaves, histogram-based
+split finding for speed, and native missing-value handling. Mean
+Macro-F1: 0.4363. Rank 8 overall.
+
+Why is XGBoost slightly worse? Default regularisation is too
+aggressive for our weak signal — it under-fits. Would benefit from
+hyperparameter search. XGBoost is not automatically better than
+scikit-learn GBM. For small, noisy datasets, simpler regularisation
+often wins.
+
+
+===============================================================================
+SLIDE 33 — ML COMPARISON: ROC AND FEATURE IMPORTANCE
+===============================================================================
+
+This slide visualises all five ML results together.
+
+On the left, the ROC curves for the 70/15/15 test. And here is the
+striking observation: all five curves sit BELOW the diagonal. AUC
+values are in the 0.36 to 0.40 range. The models rank WORSE than
+random on this test.
+
+Important: this does not mean the models are bad. It means the test
+distribution has inverted relative to the training distribution. The
+last quartile of our recording has only 8% closed-eye samples, while
+the training data had roughly 50%. Models learned one signal direction
+during training; the test data requires the opposite. AUC inverts.
+
+On the right, the RandomForest feature importance. The top five
+features are F7 at 0.084, F8 at 0.078, FC5 at 0.077, AF3 at 0.076,
+and AF4 at 0.073. All lateral frontal channels. These are where
+eye-blink electromyography is strongest. Eye blinks correlate with
+eye state, so the model learned to classify via blinks — a strong
+proxy signal.
+
+And here is the most surprising finding of the report: the occipital
+channels O1 and O2, despite being the classical Berger effect sites,
+rank only mid-table — 9th and 13th. The physiological alpha signal is
+so weak in our data that blink artifacts are easier for the model to
+learn.
+
+Models find the shortest path to the objective. If blinks are easier
+than alpha, models will use blinks.
+
+
+===============================================================================
+SLIDE 34 — READING TRAIN, CV, AND TEST LOSS CURVES
+===============================================================================
+
+Before I show you the deep learning results, I want to take a moment
+to teach you how to read loss curves. This slide is a diagnostic
+guide.
+
+There are six patterns you will see in practice, and recognising each
+is essential.
+
+Pattern one: healthy fit. Train and CV curves decrease together and
+plateau near each other. Small gap. Generalisation is good. Stop
+training briefly after the plateau.
+
+Pattern two: overfitting. Train loss keeps decreasing, but CV loss
+starts rising after some epoch. The gap widens. This is what our
+LSTM and CNN-LSTM exhibit. The remedy: early stopping, dropout, more
+data, or smaller model capacity.
+
+Pattern three: underfitting. Both curves plateau at high values,
+nearly identical and flat. This is what our Transformer shows. Either
+the model is too small or the feature signal is too weak. The remedy:
+bigger model, better features, tune learning rate.
+
+Pattern four: learning rate too high. Losses oscillate violently or
+diverge. Train loss may spike randomly. The optimiser is bouncing out
+of loss basins. Reduce learning rate by 10 times, use cosine
+annealing or warmup.
+
+Pattern five: class collapse. Train loss drops briefly then flatlines.
+CV loss flat at a different level. All predictions become the
+majority class. A trivial solution. Remedies: balanced loss,
+threshold tuning, re-sampling.
+
+Pattern six: pathological noisy CV. CV loss oscillates wildly while
+train descends smoothly. This is what our PatchTST shows. Usually
+means the CV set is too small or the model has too many parameters.
+Remedies: more CV data, fewer parameters, ensembling.
+
+Keep this slide in mind as we look at each of our deep learning
+models.
+
+
+===============================================================================
+SLIDE 35 — DEEP LEARNING ARCHITECTURES AND PROTOCOL
+===============================================================================
+
+Our five deep learning architectures. From heaviest to lightest:
+
+LSTM at 200,000 parameters — recurrent.
+CNN-LSTM at 150,000 — hybrid.
+EEG Transformer at 80,000 — attention-based.
+PatchTST Lite at 50,000 — patch-based transformer.
+And EEGNet at only 400 parameters — domain-specific CNN.
+
+Yes, you heard that right. EEGNet has 400 parameters. 500 times fewer
+than LSTM. And it ended up winning.
+
+All five models share the same training configuration. Loss is
+weighted binary cross-entropy, with class weights set to N divided by
+2 N-c. Optimiser is AdamW, learning rate 1e-3, weight decay 1e-4.
+Learning rate scheduler is cosine annealing over 25 epochs, smoothly
+decaying to zero at the end.
+
+The input window is 64 samples — about 500 milliseconds at 128 Hz.
+That is long enough to capture two full alpha cycles.
+
+Batch size 64, 25 epochs, no early stopping. We deliberately kept
+training going to the end so the loss curves would be instructive.
+
+Post-training, we sweep decision thresholds from 0.1 to 0.95 on the
+validation set and pick the arg-max of Macro-F1.
+
+Identical configuration across all five architectures is deliberate.
+It is a controlled experiment: any performance difference is caused
+by the architecture alone.
+
+
+===============================================================================
+SLIDE 36 — LSTM
+===============================================================================
+
+Deep learning algorithm one of five: LSTM, Long Short-Term Memory.
+
+The architecture is two stacked bidirectional LSTMs with 64 hidden
+units each, followed by average pooling, dropout of 0.3, and a dense
+output layer.
+
+The LSTM cell is defined by four equations. The forget gate decides
+what to keep or drop from memory. The input gate decides what new
+information to add. The cell state carries information forward. And
+the output gate decides what to output.
+
+The whole point of LSTM is addressing vanishing gradients — by
+controlling information flow via gates, gradients can propagate
+through long sequences.
+
+Why bidirectional? The backward pass lets the model use FUTURE context.
+For eye-state boundary detection, transitions extend before and after
+the moment, so future context is valuable.
+
+Total parameters: 200,000. Our heaviest model.
+
+Results on the 70/15/15 split. Macro-F1: 0.4177. AUC: 0.5908. Accuracy:
+0.5655. Threshold: 0.92.
+
+Why these results? Look at the loss curve. Train loss drops to 0.04 by
+epoch 25 — nearly zero. CV loss rises from 0.84 to 2.86. That is
+severe overfitting. The model memorised the training set. Its 200,000
+parameters had nothing else to do with only 9,500 training samples.
+
+Best for: long time-series where temporal order is the main information
+and where data volume is sufficient — over 100,000 samples — to
+prevent overfitting.
+
+Caveats here: our dataset is too small for this capacity.
+
+
+===============================================================================
+SLIDE 37 — CNN-LSTM
+===============================================================================
+
+Deep learning algorithm two of five: CNN-LSTM. A hybrid architecture.
+
+The idea: put 1D convolutional layers in front of the LSTM. The CNN
+extracts local temporal features, and the LSTM then models the
+sequence of those features.
+
+Architecture: Input of 64 by 14 goes through a Conv1D with 32 filters
+of kernel size 5, ReLU, max pool. Then another Conv1D with 64 filters
+of kernel size 3, ReLU, max pool. Then a bidirectional LSTM with 64
+hidden units. Dropout 0.3. Dense output.
+
+The Conv1D is effectively a learned filter bank. Each filter learns a
+band-pass-like pattern. Kernel size 5 covers about 40 milliseconds,
+which is long enough to capture a single oscillatory burst.
+
+Why combine CNN with LSTM? Because local patterns and long-range
+context both matter for EEG. The CNN extracts features; the LSTM
+models how features are arranged in time. This hybrid is standard in
+speech recognition and often used in biosignal analysis.
+
+Total parameters: 150,000.
+
+Results. Macro-F1: 0.4837, a big jump from LSTM's 0.4177. AUC: 0.7119,
+up from 0.59. Accuracy: 0.7086. Threshold: 0.82.
+
+The CNN front-end learned noise-robust features before temporal
+integration, and that improved AUC substantially. It still overfits —
+CV loss reaches 2.3 — but much less severely than plain LSTM.
+
+Best for: time series where local pattern recognition and long-range
+context both matter — speech, ECG, EEG, IMU sensors.
+
+
+===============================================================================
+SLIDE 38 — EEG TRANSFORMER
+===============================================================================
+
+Deep learning algorithm three of five: the EEG Transformer. Our most
+visible failure, and it's instructive.
+
+The architecture uses a CLS token with sinusoidal positional encoding
+and three Transformer encoder layers. Each encoder has multi-head
+self-attention with 4 heads, feature dimension 32, feedforward
+dimension 128, dropout 0.1.
+
+The self-attention formula: Attn of Q, K, V equals softmax of QK
+transpose divided by square-root of d_k, times V. The softmax creates
+a weighted combination of value vectors, where the weights come from
+how similar query and key are.
+
+Why attention for EEG? In theory, every time-step attends to every
+other time-step, capturing long-range dependencies. And attention can
+also operate across electrodes, picking up spatial interactions
+without hand-crafted features.
+
+Parameters: 80,000. The CLS token is a learnable summary vector,
+BERT-style, that aggregates the entire sequence into one classification
+vector.
+
+Results. Macro-F1: 0.3806. AUC: 0.1221 — WORSE than random. Accuracy:
+0.6146.
+
+What happened? The loss curve shows classic class collapse. CV
+Macro-F1 was FROZEN at 0.2702 across all 25 epochs. The model learned
+to predict the majority class only. Attention is powerful, but it
+needs massive data to shine.
+
+With about 9,500 training samples and 80,000 parameters, there was no
+inductive bias to exploit the weak label signal. Remedies would
+include pre-training on unlabelled EEG, adding a convolution front-end,
+or stronger regularisation.
+
+Best for: large datasets — millions of samples — or tasks where
+attention maps are the scientific goal.
+
+
+===============================================================================
+SLIDE 39 — EEGNET: THE WINNER
+===============================================================================
+
+Deep learning algorithm four of five: EEGNet. Published by Lawhern and
+colleagues in 2018. And this is the overall winner.
+
+Let me repeat: it has only 400 parameters. And it won the mean
+Macro-F1 comparison at 0.4964.
+
+The architecture has three blocks. Block 1 is a 2D convolution with
+temporal kernels — 1 by 64, 8 filters — followed by batch
+normalisation. Block 2 is a depthwise 2D convolution with spatial
+kernels — 14 by 1, depth multiplier 2 — batch norm, ELU, average
+pool, dropout. Block 3 is a separable convolution of 1 by 16, batch
+norm, ELU, pool, dropout, dense output.
+
+Two key innovations. Depthwise convolution applies ONE filter per
+channel instead of mixing channels. This matches EEG physics — each
+electrode captures a different brain region, so we should not blend
+them. Separable convolution combines depthwise plus a 1 by 1 pointwise
+layer, reducing parameters by 8 to 10 times while preserving
+expressiveness.
+
+Results. Macro-F1 on the test set: 0.4977. Mean Macro-F1 across splits:
+0.4964. Our winner. AUC: 0.7597, the highest of any model we tested.
+Accuracy: 0.6859. Threshold: 0.65, close to the ideal midpoint of 0.5.
+
+Why did EEGNet win despite being tiny? Only 400 parameters, so it
+literally CANNOT overfit 9,500 training samples. The temporal filter
+acts like a learned band-pass per channel. The depthwise spatial
+filter learns optimal electrode weightings. And the threshold stays
+naturally close to 0.5, which means the decision boundary generalises.
+
+Best for: any EEG classification task — drowsiness, BCI, motor
+imagery, sleep staging. This is the canonical choice for EEG datasets
+with fewer than 100,000 samples.
+
+Inductive bias beats brute force. 400 parameters with the right
+structure outperform 200,000 without.
+
+
+===============================================================================
+SLIDE 40 — PATCHTST LITE
+===============================================================================
+
+Deep learning algorithm five of five: PatchTST Lite. Published by Nie
+and colleagues in 2023, originally designed for long-horizon time
+series forecasting.
+
+The architecture. The input of 64 by 14 is split into 15 overlapping
+patches of size 8 with stride 4 — each patch is about 62 milliseconds.
+Each patch is linearly embedded into a 32-dimensional token. Add
+positional encoding, prepend a CLS token, run through 2 Transformer
+encoder layers, extract the CLS, dense output.
+
+The key innovation of PatchTST: rather than having a token for each
+time step — which would scale quadratically with sequence length —
+have a token for each patch. Attention complexity drops from order
+64-squared to order 15-squared. This enables long-context modelling
+at reasonable cost.
+
+Parameters: 50,000 for our lightweight variant.
+
+Results. Macro-F1: 0.2820. AUC: 0.2221. Accuracy: 0.3728. Threshold:
+0.95, an extreme value.
+
+These numbers are the worst of any DL model. But — and this is
+important — PatchTST has a unique property that makes it valuable for
+one specific use case. It produces almost zero FALSE NEGATIVES. The
+model predicts "closed" aggressively. It misses very few closed-eye
+events. The trade-off is many false positives.
+
+Best for: safety-critical BCI where missing a closed-eye event is
+catastrophic — drowsy driver detection is the canonical example. Also
+long time-series forecasting, its original purpose.
+
+Low overall metrics don't mean useless. PatchTST optimises for FN
+equals zero, which is exactly what a drowsy-driver alert system needs.
+
+
+===============================================================================
+SLIDE 41 — FINAL COMPARISON: OVERALL RANKING
+===============================================================================
+
+This is the money slide. Mean Macro-F1 across all three chronological
+splits.
+
+Ranked from top:
+
+Number one: EEGNet, a deep learning model, at 0.4964.
+Number two: CNN-LSTM, deep learning, at 0.4677.
+Number three: Logistic Regression, a machine learning model, at 0.4665.
+Number four: Gradient Boosting, machine learning, at 0.4589.
+Number five: EEG Transformer, deep learning, at 0.4522.
+
+And further down: Random Forest, SVM-RBF, XGBoost, Ensemble, and LSTM.
+
+Three key observations.
+
+First, EEGNet wins by a clear margin. 0.4964 versus 0.4677 for the
+runner-up. And it achieves this with only 400 parameters. Inductive
+bias beats brute force.
+
+Second, Logistic Regression is the best machine learning model at
+rank 3, only 0.03 behind the best deep learning model. For a linear
+model with L2 regularisation, this is remarkable.
+
+Third, LSTM is LAST despite being the HEAVIEST. Parameter count alone
+doesn't help on small, drifting datasets.
+
+The range of the top 10 is narrow — 0.41 to 0.50. All models face
+the same concept-drift ceiling. The ceiling is not algorithmic — it
+is the dataset's inherent difficulty.
+
+
+===============================================================================
+SLIDE 42 — WHICH ALGORITHM IS BEST: DECISION MATRIX
+===============================================================================
+
+Performance is not one-dimensional. Different scenarios favour
+different models. Let me walk you through our decision matrix.
+
+For best overall accuracy and F1: EEGNet. Mean Macro-F1 of 0.4964 and
+highest AUC of 0.76.
+
+For stable, predictable production: Logistic Regression. Lowest
+standard deviation across splits. Fastest inference. Calibrated
+probabilities.
+
+For safety-critical applications where you need to minimise false
+negatives: PatchTST Lite. Near-zero FN across all splits — ideal for
+drowsy driver detection.
+
+If you need feature importance for interpretability: Random Forest.
+Native feature ranking, which identifies F7, F8, and AF3 as the key
+channels.
+
+For a low-variance benchmark baseline: Gradient Boosting. Lowest
+variance ML model, robust to hyperparameter choices.
+
+For limited compute or embedded deployment: EEGNet again. Only 400
+parameters. Runs on a microcontroller. Best accuracy-per-parameter.
+
+For local non-linear patterns with stationary data: SVM-RBF. When
+train and test are temporally close, it hits 0.92 accuracy.
+
+For maximum capacity with very large datasets: LSTM or Transformer.
+With over 100,000 samples, recurrent and attention models scale better
+than EEGNet.
+
+There is no single "best" model. The best depends on the question and
+the constraints. Always ask: best at what?
+
+
+===============================================================================
+SLIDE 43 — KEY PROBLEMS IDENTIFIED
+===============================================================================
+
+Honest limitations that bound our performance. Nine problems, in order.
+
+Temporal concept drift. The last 15% of the recording is only 8.1%
+closed. The 44.9% distribution shift makes accuracy misleading.
+
+Severe overfitting on LSTM and CNN-LSTM. Train loss drops to 0.04;
+CV loss rises to 2.86. CV Macro-F1 plateaus around 0.60 but test
+collapses to 0.42.
+
+Transformer stuck at baseline. CV Macro-F1 frozen at 0.2702 across
+25 epochs. Predicts majority class only. AUC 0.12.
+
+Near-chance test AUC. All five ML models have AUC between 0.20 and
+0.40 on the 70/15/15 test. Rankings invert between CV and test.
+
+Unstable CV-optimised thresholds. The optimal threshold varies from
+0.53 to 0.95 for the same model across splits. No single threshold
+transfers reliably.
+
+Walk-forward fold degeneracy. Fold 1 validation is 100% closed. Fold
+3 is only 0.97% closed. AUC is undefined on homogeneous folds.
+
+Single-subject dataset. N equals 14,980 from ONE session with ONE
+subject. No cross-subject validation. Results do not generalise.
+
+Weak alpha-band separation. Alpha ratio 1.13 versus literature 2 to
+5 times. Physiological signal is below the floor most papers assume.
+
+Low Binary-F1 on the closed class. Best DL Binary-F1 is 0.21 on
+EEGNet. Most models below 0.15. Closed-eye events are rarely
+predicted correctly at test.
+
+Strong presentations include their limitations. This is not weakness
+— it is scientific honesty and points the way for future work.
+
+
+===============================================================================
+SLIDE 44 — CONCLUSIONS AND VERIFICATION
+===============================================================================
+
+Let me summarise our primary findings.
+
+One: data quality drives everything. IQR before bandpass reduced data
+loss from a potential 19% to just 9%. Log-normalization was tested
+and rejected on all 14 channels.
+
+Two: EEGNet beats heavier architectures. 400 parameters, depthwise 2D
+convolutions, calibrated threshold 0.65, giving mean Macro-F1 of
+0.4964.
+
+Three: temporal drift is the real enemy. The 44.9% distribution shift
+inverts CV-to-Test ranking. Accuracy between 0.86 and 0.96 coexists
+with AUC around 0.20.
+
+Four: model choice is use-case dependent. Research goes to EEGNet.
+Production goes to Logistic Regression. Safety BCI goes to PatchTST.
+Random Forest for interpretability.
+
+Five: the physiological signal is weaker than literature. Alpha ratio
+1.13 versus published 2 to 5 times. Consumer-grade Emotiv EPOC trades
+cost for signal-to-noise.
+
+On the right, our verification checklist. Every expansion the brief
+asked for has been addressed. Dataset and electrode positioning are
+elongated across slides 3 to 6. Correlation and collinearity are
+elongated across slides 17 to 19. EDA, FFT, PSD, and Butterworth are
+elongated across slides 7 to 23. Dimensionality reduction is
+elongated across slides 24 to 27. Every ML and DL algorithm has its
+own slide. Loss curves are explained separately on slide 34. And
+slide 42 gives the complete decision matrix.
+
+Total: 45 slides, from an original 15.
+
+
+===============================================================================
+SLIDE 45 — THANK YOU AND Q&A
+===============================================================================
+
+And with that, we reach the end.
+
+Thank you for your attention.
+
+This work was carried out by Andrea Manzo, Francesco Ventimiglia,
+Danilo Rodriguez, and Rohan Baidya, under the supervision of
+Professor Giuseppe Longo and Professor Roberta Siciliano.
+
+We are happy to take any questions you may have. Thank you.
+
+
+===============================================================================
+END OF SCRIPT — 45 SLIDES
+===============================================================================

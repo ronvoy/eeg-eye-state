@@ -1,0 +1,1699 @@
+===============================================================================
+EEG EYE STATE CLASSIFICATION — EXPLAIN LIKE I'M 5 (SELF-LEARNING GUIDE)
+===============================================================================
+
+This file is a companion to the EEG Classification Report presentation.
+It explains every concept and algorithm in the simplest possible language,
+as if you had never heard any of these terms before.
+
+If you encounter a term you don't know, search this file (Ctrl-F) for it.
+Each section builds on the previous ones, so reading start-to-finish works
+too — by the end you'll understand the whole project without jargon.
+
+===============================================================================
+TABLE OF CONTENTS
+===============================================================================
+
+PART 1 — THE BIG PICTURE
+  1.1 What is EEG?
+  1.2 What problem are we solving?
+  1.3 What's a dataset?
+  1.4 What's a model?
+
+PART 2 — THE HARDWARE
+  2.1 What's an electrode?
+  2.2 What's a microvolt?
+  2.3 What's a sampling rate?
+  2.4 What's the 10-20 system?
+  2.5 What are the 5 EEG bands?
+  2.6 What's the Berger effect?
+
+PART 3 — DATA CLEANING
+  3.1 What's a spike / artifact?
+  3.2 What's the IQR method?
+  3.3 What's a filter?
+  3.4 What's a Butterworth filter?
+  3.5 What's zero-phase filtering?
+  3.6 What's log-normalization?
+  3.7 What's skewness and kurtosis?
+
+PART 4 — FEATURE ENGINEERING
+  4.1 What's a feature?
+  4.2 What's hemispheric asymmetry?
+  4.3 What's band power?
+  4.4 What's a p-value?
+
+PART 5 — EXPLORATORY DATA ANALYSIS (EDA)
+  5.1 What's a box plot?
+  5.2 What's a histogram?
+  5.3 What's a violin plot?
+  5.4 What's correlation?
+  5.5 What's collinearity?
+  5.6 What's a heatmap?
+
+PART 6 — FREQUENCY ANALYSIS
+  6.1 What's a signal in time vs frequency?
+  6.2 What's the FFT?
+  6.3 What's PSD and Welch's method?
+  6.4 What's Nyquist?
+  6.5 What's 1/f pink noise?
+
+PART 7 — DIMENSIONALITY REDUCTION
+  7.1 What does "dimensionality" mean?
+  7.2 What's LDA?
+  7.3 What's t-SNE?
+  7.4 What's UMAP?
+  7.5 What are clustering metrics?
+
+PART 8 — TRAINING MODELS
+  8.1 What's train / validation / test?
+  8.2 What's class imbalance?
+  8.3 What's Macro-F1?
+  8.4 What's AUC-ROC?
+  8.5 What's a decision threshold?
+  8.6 What's concept drift?
+
+PART 9 — MACHINE LEARNING ALGORITHMS
+  9.1 What's Logistic Regression?
+  9.2 What's SVM?
+  9.3 What's a kernel?
+  9.4 What's Random Forest?
+  9.5 What's Gradient Boosting?
+  9.6 What's XGBoost?
+  9.7 What's regularisation?
+
+PART 10 — DEEP LEARNING CONCEPTS
+  10.1 What's a neural network?
+  10.2 What's an activation function?
+  10.3 What's backpropagation?
+  10.4 What's a loss function?
+  10.5 What's an optimizer?
+  10.6 What's learning rate?
+  10.7 What's dropout?
+  10.8 What's overfitting?
+  10.9 What's a loss curve?
+
+PART 11 — DEEP LEARNING ARCHITECTURES
+  11.1 What's a CNN?
+  11.2 What's a convolution?
+  11.3 What's an LSTM?
+  11.4 What's a CNN-LSTM?
+  11.5 What's a Transformer?
+  11.6 What's self-attention?
+  11.7 What's EEGNet?
+  11.8 What's depthwise convolution?
+  11.9 What's PatchTST?
+
+PART 12 — PUTTING IT ALL TOGETHER
+  12.1 Why is this dataset hard?
+  12.2 Why did EEGNet win?
+  12.3 Why did Transformer fail?
+  12.4 What would you do differently?
+
+
+===============================================================================
+PART 1 — THE BIG PICTURE
+===============================================================================
+
+--- 1.1 WHAT IS EEG? ---
+
+EEG stands for Electroencephalography. Break down the word:
+- "Electro" means electricity
+- "encephalo" means brain
+- "graphy" means recording
+
+So EEG is a recording of the brain's electricity.
+
+How does it work? Your brain has billions of neurons. When neurons fire,
+they produce tiny electrical signals. Put enough neurons together and
+those signals are strong enough to detect from OUTSIDE the skull — by
+placing metal sensors (electrodes) on the scalp.
+
+Imagine putting a microphone near a crowd. You can't hear one person
+clearly, but you can hear the overall roar of the crowd. EEG is similar:
+you can't see one neuron firing, but you can see the rhythm of millions
+firing together.
+
+
+--- 1.2 WHAT PROBLEM ARE WE SOLVING? ---
+
+Simple statement: given a short slice of brain signals, decide whether
+the person had their EYES OPEN or EYES CLOSED.
+
+Why is this hard? Because eye state is NOT directly visible in the
+signal. There's no obvious "switch" that flips. You have to look at
+subtle patterns — like which frequencies have more energy, or how
+different parts of the brain coordinate.
+
+Why is this useful? Detecting eye state is the foundation for:
+- Drowsiness detection in drivers
+- Sleep stage classification for sleep labs
+- Brain-computer interfaces (BCIs)
+- Fatigue monitoring in aviation and industry
+
+
+--- 1.3 WHAT'S A DATASET? ---
+
+A dataset is a big table. Each row is one measurement; each column is
+one thing we measured.
+
+For our project, each row is ONE SAMPLE (one moment in time, captured
+at 1/128 of a second). The columns are:
+- The 14 EEG channels (one column each)
+- The label: 0 (eyes open) or 1 (eyes closed)
+
+Our dataset has 14,980 rows. So we have 14,980 moments in time, each
+with 14 channel values and one label.
+
+
+--- 1.4 WHAT'S A MODEL? ---
+
+A model is a function. You give it an input, it gives you an output.
+
+For us:
+- Input: a slice of brain signals (64 samples × 14 channels, for DL)
+  or one row of features (for classical ML)
+- Output: a probability between 0 and 1
+  - Close to 0 = eyes probably open
+  - Close to 1 = eyes probably closed
+
+The model has millions (or only 400, for EEGNet) of tunable numbers
+called PARAMETERS. During training, these numbers are adjusted so that
+the model's outputs match the true labels as well as possible.
+
+
+===============================================================================
+PART 2 — THE HARDWARE
+===============================================================================
+
+--- 2.1 WHAT'S AN ELECTRODE? ---
+
+An electrode is a small metal disc that picks up electrical signals.
+For EEG, electrodes sit on the scalp, held in place by a cap or
+headband, with a bit of salt water or gel to help conductivity.
+
+Research labs use silver/silver-chloride electrodes with conductive gel.
+Our dataset used the Emotiv EPOC — a consumer-grade headset with felt
+pads soaked in salt water. Cheaper, less reliable, lower signal quality.
+
+
+--- 2.2 WHAT'S A MICROVOLT? ---
+
+A volt is a unit of electrical potential.
+A microvolt (µV) is one millionth of a volt.
+
+A AA battery is about 1.5 volts. A brain wave is about 10 to 100
+microvolts — that's 10,000 to 100,000 times weaker than a battery.
+This is why EEG is noisy: you're measuring tiny signals that can be
+easily swamped by interference.
+
+
+--- 2.3 WHAT'S A SAMPLING RATE? ---
+
+Sampling means taking a measurement at a specific moment in time.
+Sampling rate is how MANY measurements per second.
+
+Our dataset: 128 Hz means 128 samples every second. So each sample
+represents 1/128 = 7.8 milliseconds of brain activity.
+
+Why 128? Rule of thumb: you need a sampling rate at least twice the
+highest frequency you want to measure (this is the Nyquist rule —
+more on that in 6.4). For EEG we typically care about frequencies up
+to 50 or 60 Hz. 128 Hz is double that with margin.
+
+
+--- 2.4 WHAT'S THE 10-20 SYSTEM? ---
+
+Imagine you want to place electrodes on heads of different sizes
+consistently. You need a system.
+
+The 10-20 system (created in 1958) does this:
+1. Measure the distance from the bridge of the nose to the base of
+   the skull at the back. Call this distance D.
+2. Place electrodes at 10% and 20% of D, at specific positions.
+
+This way, "F7" on a small head is anatomically at the same place as
+"F7" on a large head — always over the same brain region.
+
+Naming convention:
+- First letter = lobe (F=frontal, C=central, T=temporal, P=parietal,
+  O=occipital)
+- Number = which hemisphere (odd=left, even=right)
+- Example: "F7" = left frontal area, lateral position
+
+
+--- 2.5 WHAT ARE THE 5 EEG BANDS? ---
+
+Brain waves oscillate at different speeds. Neuroscientists group them
+into 5 bands, each associated with a mental state:
+
+DELTA (0.5 to 4 Hz): deep sleep, unconsciousness. Very slow waves.
+THETA (4 to 8 Hz): drowsiness, meditation, memory work.
+ALPHA (8 to 12 Hz): relaxed wakefulness with eyes closed. ★
+BETA (12 to 30 Hz): active thinking, focused attention, problem-solving.
+GAMMA (30 Hz and up): high-level cognition, feature binding.
+
+Think of it like music: delta is a slow bass drone, gamma is a rapid
+violin. Your brain is playing all of them simultaneously, but the
+"loudness" of each changes with your mental state.
+
+
+--- 2.6 WHAT'S THE BERGER EFFECT? ---
+
+In 1924, Hans Berger invented EEG. By 1929 he discovered something
+striking: when a person closes their eyes, a strong rhythm around 10 Hz
+appears in the back of the head (the visual cortex).
+
+This rhythm is the ALPHA wave. When your eyes are open and you're
+looking at things, the visual cortex is busy processing what you see,
+and alpha is suppressed. When you close your eyes, the visual cortex
+has no input, and a synchronous wave develops — like thousands of
+neurons humming in unison.
+
+This is the classic signal our models should exploit. In research-grade
+EEG, closing your eyes can increase alpha power 2 to 5 times. In OUR
+dataset, the increase is only about 13% — much weaker. Why? Cheaper
+hardware and the subject wasn't instructed to sustain eye closure, so
+they may have just been blinking.
+
+
+===============================================================================
+PART 3 — DATA CLEANING
+===============================================================================
+
+--- 3.1 WHAT'S A SPIKE / ARTIFACT? ---
+
+A spike is a sudden, large deviation in the signal that is NOT brain
+activity.
+
+Causes include:
+- An electrode briefly loses skin contact → huge voltage jump
+- The subject moves their head → cable yanks → voltage pulse
+- The subject blinks → muscles near the eye produce a strong signal
+- A cell phone rings nearby → electromagnetic interference
+
+Our dataset has spikes up to 715,897 µV. Real brain activity is only
+about 50 µV. So spikes are ~14,000 times larger than the signal we
+want. We MUST remove them, otherwise every model will just learn the
+spikes and ignore the brain.
+
+
+--- 3.2 WHAT'S THE IQR METHOD? ---
+
+IQR stands for Interquartile Range. It's a way to find outliers.
+
+Step by step:
+1. Line up all the values of a channel from smallest to largest.
+2. Find Q1 — the value such that 25% of samples are below it.
+3. Find Q3 — the value such that 75% of samples are below it.
+4. IQR = Q3 - Q1. This is the "middle width" of the data.
+5. Reject any sample that is further than 3 × IQR from the median.
+
+Why 3 and not the textbook 1.5? Because EEG has legitimate high-amplitude
+events (alpha bursts, sleep spindles) that we want to KEEP. 1.5 would
+throw them away. 3.0 keeps them and only removes clear hardware
+failures.
+
+Row-wise: if ANY of the 14 channels flags a row, we drop the whole row.
+This keeps the channels aligned in time.
+
+
+--- 3.3 WHAT'S A FILTER? ---
+
+A filter is a mathematical operation that REMOVES certain frequencies
+from a signal while KEEPING others.
+
+Real-world analogy: your car radio has a filter. It lets only the
+frequency of your chosen station pass through and blocks all others.
+
+Types of filter:
+- Low-pass: keeps low frequencies, removes high (e.g., smoothing)
+- High-pass: keeps high, removes low (e.g., removing DC drift)
+- Bandpass: keeps a middle range, removes both extremes
+- Bandstop / notch: removes a specific narrow range (e.g., 50 Hz hum)
+
+We use a BANDPASS filter from 0.5 to 45 Hz. This removes:
+- Below 0.5 Hz: very slow drift (not neural)
+- Above 45 Hz: power-line hum (50 Hz in Europe), muscle noise
+
+
+--- 3.4 WHAT'S A BUTTERWORTH FILTER? ---
+
+Butterworth is a specific DESIGN of filter. It's named after Stephen
+Butterworth, who invented it in 1930.
+
+Key property: maximally flat passband. Inside the frequencies you want
+to keep, the filter does not distort their amplitude. A Butterworth
+filter "leaves alone" the good frequencies very faithfully.
+
+The trade-off: the transition between keep and remove is GENTLE. A
+Butterworth doesn't switch from "passing" to "blocking" abruptly.
+
+Alternative filters:
+- Chebyshev: sharper transition, but RIPPLES in the passband
+- Elliptic: sharpest, but ripples in both keep and remove regions
+
+For EEG, amplitude fidelity matters more than sharpness, so
+Butterworth wins.
+
+Filter ORDER: 4th-order is what we used. Higher order = steeper
+transition but more ringing in transient responses. 4th is a good
+compromise.
+
+
+--- 3.5 WHAT'S ZERO-PHASE FILTERING? ---
+
+Any filter introduces a "delay" in the signal — output comes out
+slightly shifted in time relative to input. This is called phase
+distortion.
+
+Zero-phase filtering eliminates this. How? Run the signal through the
+filter forward, then reverse it and run it backward through the same
+filter. The two passes cancel each other's delays. In Python's scipy
+this is done with `scipy.signal.filtfilt`.
+
+For EEG, phase distortion would misalign events across channels, which
+would confuse models. Zero-phase keeps everything in sync.
+
+
+--- 3.6 WHAT'S LOG-NORMALIZATION? ---
+
+Log-normalization is a mathematical transformation: replace each value
+x with log(1 + |x|), preserving the sign.
+
+Why would you do this? If your data has heavy tails — many extreme
+values — the log compresses large values and expands small ones.
+Result: a more Gaussian (bell-shaped) distribution, which many models
+prefer.
+
+BUT — and this is what we discovered — log is not always helpful. If
+your data is already symmetric around zero (like bandpass-filtered
+EEG), the log artificially splits the distribution into two clumps
+and INCREASES skewness. We tested it, measured worse skewness on all
+14 channels, and rejected it.
+
+Lesson: always measure before and after a transformation. Don't apply
+transforms reflexively.
+
+
+--- 3.7 WHAT'S SKEWNESS AND KURTOSIS? ---
+
+These are numerical descriptions of a distribution's shape, beyond
+just mean and variance.
+
+SKEWNESS: how asymmetric is the distribution?
+- Skewness 0 = perfectly symmetric (like a normal bell curve)
+- Positive skewness = long tail to the right (rare large values)
+- Negative skewness = long tail to the left (rare small values)
+
+KURTOSIS: how heavy are the tails?
+- Kurtosis 3 = normal distribution (reference point)
+- Kurtosis > 3 = heavy tails (more outliers than normal)
+- Kurtosis < 3 = light tails (fewer outliers than normal)
+
+Raw EEG had skewness up to 78 and kurtosis up to 6,000 — wildly
+non-normal, hardware-dominated. After preprocessing, skewness fell
+below 2 and kurtosis below 12 on all channels — much closer to normal.
+
+
+===============================================================================
+PART 4 — FEATURE ENGINEERING
+===============================================================================
+
+--- 4.1 WHAT'S A FEATURE? ---
+
+A feature is a number computed from raw data that you think might be
+useful for prediction.
+
+For EEG:
+- Raw values at each sample are features (we have 14 per sample)
+- But you can also compute MORE features: rolling averages, band
+  powers, asymmetry between left and right, etc.
+
+Why engineer features? Because a simple ML model works better with
+carefully-chosen features than with raw data. Deep learning can learn
+features automatically, but for small datasets, hand-crafted features
+often win.
+
+Our total feature count: 116 (14 raw + 14 rolling means + 14 rolling
+stds + 70 FFT features + 4 band ratios).
+
+
+--- 4.2 WHAT'S HEMISPHERIC ASYMMETRY? ---
+
+Your brain has two hemispheres — left and right. They look similar
+but do different things (left is typically more verbal, right more
+spatial).
+
+Hemispheric asymmetry is the DIFFERENCE between left and right
+channels. For each of 7 symmetric electrode pairs, we compute:
+
+  asymmetry = left_channel - right_channel
+
+Why? Research shows that frontal alpha asymmetry correlates with
+emotional state, and disrupted symmetry signals fatigue.
+
+We tested whether each of our 7 asymmetry features differs between
+eye-open and eye-closed states using a t-test. Only 2 pairs showed
+significant difference: F7-F8 (lateral frontal) and P7-P8 (parietal).
+
+We kept all 7 features anyway. Even non-significant features can help
+a model via interactions with other features.
+
+
+--- 4.3 WHAT'S BAND POWER? ---
+
+For each of the 5 EEG bands (delta, theta, alpha, beta, gamma), we
+compute how much energy is in that frequency range.
+
+Computation: run Welch's PSD (see 6.3), then integrate the power
+within the band's frequency boundaries.
+
+For each sample, we get 5 band powers per channel — a direct measure
+of "how much delta-like activity", "how much alpha", etc.
+
+The most important band power for eye state: ALPHA. When eyes close,
+alpha power increases (Berger effect). We measured this increase and
+compared to open-eye state. Ratio = 1.13 (13% increase). Literature
+says 2-5x.
+
+
+--- 4.4 WHAT'S A P-VALUE? ---
+
+A p-value tells you "how likely is this result if nothing interesting
+is going on?"
+
+Example: you flip a coin 100 times and get 62 heads. Is this a fair
+coin?
+- If the coin IS fair, the probability of seeing 62 or more heads
+  by chance is about 0.01.
+- That 0.01 is the p-value.
+
+Interpretation:
+- p < 0.05: "unlikely to be a coincidence" → we usually call it
+  statistically significant
+- p > 0.05: "could be coincidence" → not significant
+
+For our asymmetry test: F7-F8 had p = 0.018 < 0.05 (significant).
+AF3-AF4 had p = 0.243 > 0.05 (not significant).
+
+Caveat: p-values are often misunderstood. They do NOT tell you how
+big or important an effect is — only whether it's likely to be real.
+
+
+===============================================================================
+PART 5 — EXPLORATORY DATA ANALYSIS (EDA)
+===============================================================================
+
+--- 5.1 WHAT'S A BOX PLOT? ---
+
+A box plot summarizes a distribution with 5 numbers:
+- Minimum (or Q1 - 1.5 × IQR, whichever is smaller)
+- Q1 (25th percentile)
+- Median (middle value)
+- Q3 (75th percentile)
+- Maximum (or Q3 + 1.5 × IQR)
+
+The box spans Q1 to Q3. The line inside the box is the median. The
+whiskers reach out to the min/max. Points beyond are plotted as
+outliers.
+
+Why use box plots? To compare many distributions side-by-side quickly.
+In our case, comparing 14 channels before and after preprocessing
+shows dramatically how dynamic range shrunk from ±10^5 µV to ±25 µV.
+
+
+--- 5.2 WHAT'S A HISTOGRAM? ---
+
+A histogram divides the range of values into BINS (buckets) and
+counts how many samples fall into each bin. The height of each bar
+is the count.
+
+Histograms show the SHAPE of a distribution — is it bell-shaped
+(normal), bimodal (two peaks), skewed, uniform?
+
+We overlay two histograms: blue for eyes open, red for eyes closed.
+If one shifts or widens relative to the other, that channel is
+discriminative. In our data, the two histograms overlap 85-95% on
+most channels → weak single-channel discrimination.
+
+
+--- 5.3 WHAT'S A VIOLIN PLOT? ---
+
+A violin plot is a box plot PLUS a density estimate, mirrored on
+both sides so it looks like a violin shape.
+
+The width of the violin at any height tells you how many samples
+have that value. Thus a violin shows:
+- Where most of the mass is (wide parts)
+- Whether there are multiple peaks (bimodality)
+- Whether tails are heavy or light
+
+We use violins to check: are our distributions UNIMODAL? If yes,
+linear classifiers are a reasonable choice. If bimodal, we might
+need non-linear boundaries. Our data is unimodal — linear models
+are fine.
+
+
+--- 5.4 WHAT'S CORRELATION? ---
+
+Correlation measures how two variables MOVE TOGETHER.
+
+Pearson correlation (the most common) ranges from -1 to +1:
+- +1 = they move perfectly together (when one goes up, so does the other)
+- 0 = independent
+- -1 = perfectly opposite (when one goes up, the other goes down)
+
+Example: if two EEG channels are measuring similar brain regions,
+their signals will rise and fall together → high positive correlation.
+
+
+--- 5.5 WHAT'S COLLINEARITY? ---
+
+Collinearity is when multiple features are strongly correlated with
+each other. Problem: they contain REDUNDANT information.
+
+Why is this a problem?
+- Linear models (Logistic Regression, LDA) can become numerically
+  unstable. The coefficients start bouncing around because the model
+  can't decide which of the correlated features to use.
+- Tree models (Random Forest, Gradient Boosting) handle it fine.
+- Neural networks handle it fine.
+
+Remedies:
+- Drop one of the correlated features
+- Use regularisation (L2 / Ridge) to constrain coefficients
+- Use PCA to combine correlated features
+
+Our case: F7-F8 have correlation 0.87 even after cleaning. But this
+is PHYSIOLOGICAL (the hemispheres naturally co-activate), not
+redundant. We keep both and use L2 regularisation on linear models.
+
+
+--- 5.6 WHAT'S A HEATMAP? ---
+
+A heatmap is a 2D grid where each cell is colored according to its
+value. For correlations, we make a 14×14 grid where row i, column j
+shows the correlation between channel i and channel j.
+
+Colour scale: red = high correlation, blue = negative, white = zero.
+
+Reading our heatmap: the diagonal is always red (a channel perfectly
+correlates with itself). The off-diagonal entries tell us about
+coupling between different channels.
+
+
+===============================================================================
+PART 6 — FREQUENCY ANALYSIS
+===============================================================================
+
+--- 6.1 WHAT'S A SIGNAL IN TIME VS FREQUENCY? ---
+
+A signal in TIME: a graph of value vs time (e.g., voltage over
+milliseconds).
+
+A signal in FREQUENCY: a graph of energy at each frequency (e.g.,
+how much 10 Hz, 20 Hz, 30 Hz is in the signal).
+
+Both describe the same signal — just from different perspectives.
+
+Analogy: a piano chord contains multiple notes (frequencies) played
+at once. The TIME view shows you the wiggle of the air pressure.
+The FREQUENCY view tells you "this chord has C at this intensity,
+E at this intensity, G at this intensity."
+
+For EEG, the frequency view is MORE INFORMATIVE than the time view,
+because brain states are defined by which frequencies are strong.
+
+
+--- 6.2 WHAT'S THE FFT? ---
+
+FFT = Fast Fourier Transform.
+
+Fourier discovered (in 1822) that any signal can be written as a sum
+of sine waves at different frequencies. The Fourier Transform tells
+you the AMPLITUDE and PHASE of each frequency.
+
+"Fast" Fourier Transform (Cooley-Tukey, 1965) is an algorithm that
+computes this efficiently. Without it, computing spectra would be
+impractical.
+
+For a signal of length N:
+- Naive computation: N² operations
+- FFT: N × log(N) operations
+
+For N = 1024, that's 1 million vs 10,000 operations — 100× speedup.
+
+Output of FFT: for each frequency bin, a complex number whose magnitude
+is the amplitude and whose angle is the phase.
+
+
+--- 6.3 WHAT'S PSD AND WELCH'S METHOD? ---
+
+PSD = Power Spectral Density. Basically, the amplitude of FFT squared
+gives you the POWER at each frequency.
+
+Problem: a single FFT on a short noisy signal is itself noisy. The
+estimate has high variance.
+
+Welch's method (1967) fixes this:
+1. Break the signal into overlapping chunks (say, 50% overlap)
+2. Multiply each chunk by a window function (Hann) to reduce edge
+   effects
+3. Compute FFT of each chunk, square to get power
+4. Average across all chunks
+
+Result: a smooth, reliable PSD with lower variance than a single FFT.
+
+We use Welch's PSD for computing band powers and for visualising
+spectral differences between eye-open and eye-closed.
+
+
+--- 6.4 WHAT'S NYQUIST? ---
+
+The Nyquist-Shannon sampling theorem (1949): to faithfully represent
+a signal containing frequencies up to F, you must sample at a rate of
+at least 2F.
+
+Intuitively: if you sample too slowly, fast oscillations look slow
+(the classic wagon-wheel illusion in old Western movies).
+
+Our sampling rate: 128 Hz. So our Nyquist frequency is 64 Hz. We
+cannot reliably measure anything above 64 Hz.
+
+Gamma band extends to 100 Hz in theory, but we can only see up to
+64 Hz. And since 50 Hz line noise is strong, we filter out above 45 Hz
+anyway. So our effective gamma range is just 30-45 Hz.
+
+
+--- 6.5 WHAT'S 1/F PINK NOISE? ---
+
+Many natural signals — including brain activity — have a spectral
+shape where power is INVERSELY PROPORTIONAL to frequency. This is
+called "1/f" or "pink noise".
+
+Compared to white noise (equal power at all frequencies):
+- Low frequencies have MORE power in 1/f noise
+- High frequencies have LESS power
+
+This 1/f shape is the baseline of cortical activity. Interesting
+brain states show DEVIATIONS from 1/f — peaks in alpha, peaks in
+beta, etc.
+
+Our data shows the expected 1/f shape, confirming preprocessing
+preserved physiological structure. Small alpha bumps on occipital
+channels are the only deviation — and that bump IS the Berger effect.
+
+
+===============================================================================
+PART 7 — DIMENSIONALITY REDUCTION
+===============================================================================
+
+--- 7.1 WHAT DOES "DIMENSIONALITY" MEAN? ---
+
+Each feature in your data is a DIMENSION. If you have 116 features
+per sample, your data lives in 116-dimensional space.
+
+You cannot visualise 116D directly. Humans can barely grasp 3D. So
+to SEE class structure, you project to 1, 2, or 3 dimensions.
+
+Good projection = keeps important differences between classes.
+Bad projection = loses class structure.
+
+
+--- 7.2 WHAT'S LDA? ---
+
+LDA = Linear Discriminant Analysis. A SUPERVISED method — it uses
+class labels.
+
+Goal: find the direction (1D axis) that maximally separates the
+classes. Formally: maximise the ratio of between-class variance to
+within-class variance (Fisher's criterion).
+
+For binary classification, LDA produces exactly 1 axis. Projecting
+data onto this axis gives each sample a single number. If the two
+classes are separable by a line, their projections will be mostly
+separated.
+
+Our result: LDA achieved Silhouette = 0.156. Modest but real
+separation. This is why LINEAR MODELS (Logistic Regression, LDA)
+work well for us — the classes are linearly distinguishable, with
+overlap.
+
+
+--- 7.3 WHAT'S T-SNE? ---
+
+t-SNE = t-distributed Stochastic Neighbour Embedding. An UNSUPERVISED
+method — it does NOT use labels.
+
+Goal: preserve LOCAL similarity between points. Points close together
+in 116D should be close in 2D. Far-apart points can be arranged
+arbitrarily.
+
+Algorithm:
+1. Compute pairwise similarities in high-D using Gaussian kernels
+2. Compute pairwise similarities in low-D using heavy-tailed
+   t-distributions (prevents crowding)
+3. Move points in low-D to minimise KL divergence between the two
+   sets of similarities
+
+Parameters:
+- Perplexity: roughly "how many neighbours each point cares about"
+  (we use 30)
+- Learning rate: step size in the optimisation
+
+IMPORTANT caveats:
+- Results depend on random seed and perplexity
+- Cluster SIZES in a t-SNE plot are NOT meaningful
+- Distances BETWEEN clusters are NOT meaningful
+- Use t-SNE for visualisation only, not analysis
+
+
+--- 7.4 WHAT'S UMAP? ---
+
+UMAP = Uniform Manifold Approximation and Projection. Published in
+2018 as an improved t-SNE.
+
+Advantages over t-SNE:
+- Preserves BOTH local AND global structure
+- Inter-cluster distances are meaningful
+- Deterministic given a seed (reproducible)
+- Scales to millions of points
+
+Algorithm (simplified):
+1. Build a k-nearest-neighbour graph in high-D
+2. Assign fuzzy probabilities to edges
+3. Optimise low-D layout to best preserve the high-D topology
+
+Our result: UMAP silhouette 0.065 (slightly better than t-SNE's
+0.054). Confirms weak class structure in feature space — supervision
+is essential.
+
+
+--- 7.5 WHAT ARE CLUSTERING METRICS? ---
+
+To compare dimensionality reduction methods numerically, we use three
+metrics:
+
+SILHOUETTE SCORE (higher better, range -1 to +1):
+For each point, compute:
+- a = average distance to other points in same cluster
+- b = average distance to points in nearest other cluster
+- silhouette = (b - a) / max(a, b)
+Average across all points. Positive = separated, negative = overlapping.
+
+DAVIES-BOULDIN INDEX (lower better, >= 0):
+Average similarity of each cluster to its nearest neighbour cluster,
+where similarity is a ratio of within-cluster scatter to between-
+cluster separation.
+
+CALINSKI-HARABASZ INDEX (higher better, >= 0):
+Ratio of between-cluster dispersion to within-cluster dispersion.
+
+Our results: LDA wins ALL three. Supervised dominates unsupervised
+when classes exist.
+
+
+===============================================================================
+PART 8 — TRAINING MODELS
+===============================================================================
+
+--- 8.1 WHAT'S TRAIN / VALIDATION / TEST? ---
+
+When training a model, we split data into three parts:
+
+TRAIN (usually 60-80%): the model sees these examples and LEARNS
+from them.
+
+VALIDATION (usually 10-20%): used to tune hyperparameters (like
+which model, which settings). The model DOES NOT learn from these,
+but we pick the best version based on how well it performs here.
+
+TEST (usually 10-20%): the FINAL evaluation. Never touched during
+training or tuning. Gives an honest estimate of real-world
+performance.
+
+Our splits: 60/20/20, 70/15/15, 80/10/10. All CHRONOLOGICAL (earliest
+data in train, latest in test).
+
+Why chronological? Because our dataset has CONCEPT DRIFT (see 8.6).
+Random shuffling would leak future information into the past and
+make results look artificially good.
+
+
+--- 8.2 WHAT'S CLASS IMBALANCE? ---
+
+Class imbalance is when classes have different sizes. Our data: 55.1%
+open, 44.9% closed. Mild imbalance.
+
+Severe imbalance (e.g., 99% class A, 1% class B) is a big problem:
+the model can achieve 99% accuracy by always predicting A, without
+learning anything. Mild imbalance is less severe but still affects
+decision thresholds.
+
+Mitigations:
+- CLASS WEIGHTS: during training, multiply the loss for minority-class
+  samples by a factor so they count more. Formula: w_c = N / (2 × N_c)
+- RESAMPLING: oversample minority (SMOTE) or undersample majority.
+  Not needed for our mild imbalance.
+- THRESHOLD TUNING: after training, search for the decision threshold
+  that maximises the metric you care about.
+
+
+--- 8.3 WHAT'S MACRO-F1? ---
+
+F1 is a metric that combines precision and recall for one class.
+
+For a class:
+- PRECISION = (true positives) / (true positives + false positives)
+  "When I predicted this class, how often was I right?"
+- RECALL = (true positives) / (true positives + false negatives)
+  "Of all actual samples of this class, how many did I catch?"
+- F1 = 2 × precision × recall / (precision + recall)
+  The harmonic mean. High F1 requires BOTH high precision AND high
+  recall.
+
+MACRO-F1 = average of F1 across all classes.
+
+  Macro-F1 = (F1_class0 + F1_class1) / 2
+
+Why Macro-F1? Unlike accuracy, which can be dominated by the majority
+class, Macro-F1 gives equal weight to each class. Critical for
+imbalanced data. Our primary metric.
+
+
+--- 8.4 WHAT'S AUC-ROC? ---
+
+ROC = Receiver Operating Characteristic curve.
+AUC = Area Under the Curve.
+
+How it works:
+1. For each possible decision threshold, compute True Positive Rate
+   (TPR) and False Positive Rate (FPR).
+2. Plot TPR vs FPR as threshold varies — this is the ROC curve.
+3. Area under this curve (AUC) summarises the whole thing in one
+   number.
+
+Interpretation:
+- AUC = 1.0: perfect classifier
+- AUC = 0.5: random guessing
+- AUC < 0.5: WORSE than random (inverted ranking)
+
+AUC is THRESHOLD-INDEPENDENT. It measures how well the model RANKS
+positives above negatives, regardless of where you draw the decision
+line.
+
+In our results, several models have AUC around 0.3-0.4 (worse than
+random). This is because CONCEPT DRIFT inverts the ranking between
+training and test.
+
+
+--- 8.5 WHAT'S A DECISION THRESHOLD? ---
+
+Classifiers output a PROBABILITY (0 to 1). To make a hard decision
+(class 0 vs 1), you pick a THRESHOLD.
+
+Default threshold is usually 0.5: if P ≥ 0.5, predict class 1; else
+class 0.
+
+But you can CHOOSE a different threshold based on what metric you
+want to optimise:
+- Lower threshold (e.g., 0.3): more class-1 predictions → higher
+  recall, lower precision
+- Higher threshold (e.g., 0.7): fewer class-1 predictions → higher
+  precision, lower recall
+
+We tune the threshold on the validation set to maximise Macro-F1 for
+each model. Our optimal thresholds range from 0.53 to 0.95 across
+models and splits — quite variable, indicating instability.
+
+
+--- 8.6 WHAT'S CONCEPT DRIFT? ---
+
+Concept drift is when the statistical properties of the data change
+over TIME.
+
+Our case: the proportion of eyes-closed samples varies across
+quartiles of the recording:
+- Q1: 49.8% closed
+- Q2: 62.3% closed
+- Q3: 41.5% closed
+- Q4: 24.2% closed
+- Last 15%: only 8.1% closed
+
+So if we train on the first 70% and test on the last 15%, the test
+set's class balance is radically different. A model that predicts
+"mostly closed" (appropriate for training data) will over-predict
+closed on test data where most samples are actually open.
+
+This is why our test AUC often flips below 0.5 — the ranking from
+training no longer applies to test. Accuracy can stay high (models
+still get most of the test right, but only because they default to
+the majority class "open" in the drifted test distribution).
+
+Remedies:
+- Use Macro-F1 instead of accuracy (more robust to class shift)
+- Tune thresholds on validation data
+- Adapt the model online (not done here, but possible)
+- Collect data that covers the full distribution of expected test
+  conditions
+
+
+===============================================================================
+PART 9 — MACHINE LEARNING ALGORITHMS
+===============================================================================
+
+--- 9.1 WHAT'S LOGISTIC REGRESSION? ---
+
+Despite the name, it's a CLASSIFIER (not regression).
+
+Model: P(y=1 | x) = sigmoid(w·x + b)
+
+Where:
+- x is the feature vector
+- w is a weight vector (learned)
+- b is a bias (learned)
+- sigmoid squashes any real number into [0,1]
+
+Sigmoid function: sigmoid(z) = 1 / (1 + e^(-z))
+- sigmoid(0) = 0.5
+- sigmoid(+∞) → 1
+- sigmoid(-∞) → 0
+
+Training: find w and b that minimise binary cross-entropy loss. This
+is a CONVEX optimisation (there's a single global minimum). Efficient
+solvers like L-BFGS find it quickly.
+
+Properties:
+- FAST to train and predict
+- INTERPRETABLE: each weight tells you how much that feature matters
+- Produces well-CALIBRATED probabilities
+- Only learns LINEAR decision boundaries
+
+Our hyperparameters:
+- L2 penalty (Ridge regularisation)
+- C = 1.0 (inverse regularisation strength)
+- Balanced class weights
+
+Result: BEST ML model by mean Macro-F1 (0.4665). Most stable across
+splits. The simple model wins.
+
+
+--- 9.2 WHAT'S SVM? ---
+
+SVM = Support Vector Machine. A maximum-margin classifier.
+
+Idea: find the hyperplane (a boundary that separates classes) that
+maximises the DISTANCE to the nearest training points on each side.
+Those nearest points are called "support vectors".
+
+For linearly separable data: one such hyperplane exists.
+For non-separable data: allow some violations (soft margin) but
+penalise them. The C parameter controls this trade-off.
+
+For non-linear separation: use the KERNEL TRICK (see 9.3).
+
+Our use: SVM with RBF kernel. Mean Macro-F1 = 0.4233. Rank 7.
+
+Why not the best here: RBF kernel fits local curvature of training
+data. When concept drift shifts the test distribution, learned
+curvature doesn't apply. High variance across splits.
+
+
+--- 9.3 WHAT'S A KERNEL? ---
+
+A kernel is a similarity function: K(x, y) returns a number saying
+how similar x and y are.
+
+The "kernel trick": if you can compute K(x, y) without explicitly
+mapping to a high-dimensional space, you can run linear algorithms
+in that high-D space implicitly. This lets linear models (like SVM)
+learn non-linear decision boundaries.
+
+RBF (Radial Basis Function / Gaussian) kernel:
+
+  K(x, y) = exp(-gamma × ||x - y||²)
+
+Properties:
+- Output ranges 0 to 1
+- = 1 when x = y (identical)
+- → 0 as x and y get far apart
+- gamma controls how quickly similarity drops with distance
+
+The RBF kernel corresponds to an infinite-dimensional feature mapping.
+An SVM with RBF can, in principle, separate ANY dataset. In practice,
+it can overfit.
+
+
+--- 9.4 WHAT'S RANDOM FOREST? ---
+
+Random Forest is an ENSEMBLE of decision trees.
+
+DECISION TREE: a model that asks yes/no questions about features to
+partition the data. "Is F7 > 10?" → branch one way or the other →
+another question → eventually reach a leaf with a prediction.
+
+Single trees are easy to overfit. Random Forest fights this with two
+randomisations:
+
+1. BAGGING (Bootstrap Aggregation): each tree is trained on a random
+   bootstrap sample (with replacement) of rows.
+2. FEATURE RANDOMNESS: at each node, only a random subset of √p
+   features is considered for splitting.
+
+Prediction: majority vote across all trees.
+
+Why it works: bagging reduces variance. Feature randomness makes
+trees DECORRELATED. Multiple uncorrelated models averaged together
+perform better than any single one.
+
+Bonus: Random Forest gives FEATURE IMPORTANCE — how much each feature
+helped reduce impurity across trees. Our RF revealed F7, F8, AF3, AF4,
+FC5 as top features (lateral frontal channels — they pick up eye-blink
+signals).
+
+Our config: 200 trees, max depth None, Gini impurity, balanced
+weights. Mean Macro-F1 = 0.4311. Rank 6.
+
+
+--- 9.5 WHAT'S GRADIENT BOOSTING? ---
+
+Gradient Boosting is another tree ensemble, but SEQUENTIAL (not
+parallel like Random Forest).
+
+Idea: at each step, train a new tree that corrects the MISTAKES of
+the current ensemble. Keep adding trees until you have enough.
+
+Math:
+  F_m(x) = F_{m-1}(x) + η × h_m(x)
+
+Where:
+- F_m is the ensemble after m trees
+- h_m is the new tree at step m
+- η is the learning rate (shrinkage, typically 0.1)
+- h_m fits the NEGATIVE GRADIENT of the loss at F_{m-1}
+
+"Gradient" because each tree moves the ensemble in the direction of
+steepest loss reduction.
+
+Versus Random Forest:
+- RF: independent trees, parallel training, averaged predictions
+- GB: dependent trees, sequential training, additive predictions
+
+Our config: 200 trees, lr = 0.1, max depth 5, balanced weights.
+Mean Macro-F1 = 0.4723. Rank 4.
+
+Best ML model for STABILITY (lowest variance across splits).
+
+
+--- 9.6 WHAT'S XGBOOST? ---
+
+XGBoost = eXtreme Gradient Boosting. Published in 2016, became
+famous for winning Kaggle competitions.
+
+It's basically Gradient Boosting with optimisations:
+- L1 AND L2 regularisation on leaf weights
+- HISTOGRAM-BASED split finding (bin features first, faster)
+- Handles MISSING VALUES natively
+- Parallel tree construction (not sequential within a single tree)
+- Early stopping
+- scale_pos_weight for imbalance
+
+In theory, better than vanilla GB. In practice, on our small dataset,
+default regularisation is TOO aggressive and under-fits the weak
+signal. Mean Macro-F1 = 0.4363. Rank 8.
+
+Would benefit from hyperparameter search. But shows XGBoost is not
+automatically better.
+
+
+--- 9.7 WHAT'S REGULARISATION? ---
+
+Regularisation is a technique to prevent OVERFITTING.
+
+Without regularisation: model tries to fit training data perfectly,
+including noise. Poor performance on new data.
+
+With regularisation: add a penalty to the loss function that
+discourages large weights.
+
+Two common forms:
+- L1 (Lasso): penalty proportional to |w| → produces SPARSE solutions
+  (many weights exactly zero) → implicit feature selection
+- L2 (Ridge): penalty proportional to w² → shrinks all weights
+  toward zero but rarely to exactly zero
+
+Effect: smaller weights = smoother decision boundary = less overfitting.
+
+The strength is controlled by a hyperparameter (alpha, lambda, or
+1/C depending on the library). Tuned via cross-validation.
+
+Our Logistic Regression uses L2 with C = 1.0. Our linear SVM also
+uses L2 implicitly through its hinge loss + margin formulation.
+
+
+===============================================================================
+PART 10 — DEEP LEARNING CONCEPTS
+===============================================================================
+
+--- 10.1 WHAT'S A NEURAL NETWORK? ---
+
+A neural network is a model made of LAYERS of simple computations.
+
+Basic unit (neuron): takes inputs, multiplies each by a weight, adds a
+bias, applies a non-linear "activation function", produces an output.
+
+  output = activation(w1 × x1 + w2 × x2 + ... + wn × xn + b)
+
+Stack many neurons in a layer. Stack many layers. Connect them.
+That's a neural network. Millions of weights, all learned from data.
+
+"Deep" learning = neural networks with MANY layers (more than 2-3).
+
+Why deep? Each layer can learn progressively more abstract features.
+Layer 1 might detect edges. Layer 2 might detect shapes. Layer 3
+might detect objects. This HIERARCHY is what makes deep networks so
+powerful.
+
+
+--- 10.2 WHAT'S AN ACTIVATION FUNCTION? ---
+
+A non-linear function applied after each layer. Without it, stacked
+layers collapse into one big linear layer (no more expressive than
+logistic regression).
+
+Common activations:
+- SIGMOID: σ(z) = 1/(1+e^-z). Output [0,1]. Used mostly at the final
+  layer for binary classification.
+- TANH: (e^z - e^-z)/(e^z + e^-z). Output [-1,+1]. Zero-centered.
+- RELU: max(0, z). Simple, fast, works great in deep networks.
+- ELU: z if z > 0; α(e^z - 1) otherwise. Smooth version of ReLU.
+  Used in EEGNet.
+- GELU: Gaussian Error Linear Unit. Used in Transformers.
+
+Activation determines which signals get "passed through" and which
+get suppressed. Non-linearity is why networks can learn complex
+functions.
+
+
+--- 10.3 WHAT'S BACKPROPAGATION? ---
+
+Backprop is the algorithm used to TRAIN neural networks.
+
+Forward pass: feed input through network, get prediction.
+Compute loss (how wrong the prediction was).
+Backward pass: compute gradient of loss with respect to EACH weight.
+Update: adjust each weight in direction that DECREASES loss.
+
+The gradient is computed by the CHAIN RULE from calculus. Each
+layer "passes back" the gradient to the previous layer.
+
+Without backprop, we couldn't train deep networks. It's the key
+algorithm from the 1970s-80s that enabled modern deep learning.
+
+
+--- 10.4 WHAT'S A LOSS FUNCTION? ---
+
+A loss function measures how wrong the model's predictions are.
+Training means MINIMISING this loss.
+
+Common losses:
+- Mean Squared Error (MSE): for regression. (prediction - truth)².
+- Binary Cross-Entropy (BCE): for binary classification.
+   L = -[y log(p) + (1-y) log(1-p)]
+  When y=1, L = -log(p). Drives p toward 1.
+  When y=0, L = -log(1-p). Drives p toward 0.
+
+In our project, we use WEIGHTED BCE to handle class imbalance. Each
+sample contributes w_c × BCE, where w_c = N/(2*N_c) — the inverse
+class frequency.
+
+
+--- 10.5 WHAT'S AN OPTIMIZER? ---
+
+An optimizer is the algorithm that UPDATES weights based on gradients.
+
+Simplest: Stochastic Gradient Descent (SGD). New weight = old weight
+minus learning_rate × gradient.
+
+Better: SGD with momentum. Accumulate gradients over time (like a
+ball rolling downhill). Faster convergence.
+
+Adam (2014): adaptive learning rates per parameter. Tracks running
+averages of gradient and squared gradient. Default choice for most
+deep learning.
+
+AdamW (2017): Adam with DECOUPLED weight decay. Slightly better
+generalisation than vanilla Adam. This is what we use.
+
+Learning rate of 1e-3 (0.001) is a standard starting point.
+
+
+--- 10.6 WHAT'S LEARNING RATE? ---
+
+The learning rate controls how big a step you take in the direction
+of the gradient.
+
+- Too high: overshoots the minimum, loss oscillates or diverges.
+- Too low: training takes forever, may get stuck in local minima.
+
+We use COSINE ANNEALING: start at lr = 1e-3, smoothly decrease
+following a cosine curve over all epochs, ending at 0. This lets
+us take big steps early and fine-tune with small steps at the end.
+
+
+--- 10.7 WHAT'S DROPOUT? ---
+
+Dropout is a regularisation technique for neural networks.
+
+During training: randomly set a fraction p of neurons' outputs to 0
+in each layer, each batch. Typical p = 0.3 to 0.5.
+
+Why it helps: forces the network to not rely too heavily on any
+single neuron. Creates an implicit ENSEMBLE of sub-networks.
+
+During inference (test time): all neurons are active, outputs are
+scaled to match training behaviour.
+
+Our DL models use dropout 0.3 in their final layers.
+
+
+--- 10.8 WHAT'S OVERFITTING? ---
+
+Overfitting = the model learns the training data TOO WELL, including
+noise and quirks. It then fails on new data.
+
+Telltale signs:
+- Training loss keeps going down
+- Validation loss starts going UP
+- Big gap between train and validation performance
+
+Our LSTM and CNN-LSTM overfit badly. Train loss reached 0.04 while
+CV loss rose to 2.86. The networks had too many parameters (200k,
+150k) for our ~9,500 training samples.
+
+Remedies:
+- More data
+- Smaller model (fewer parameters)
+- Regularisation (L2, dropout)
+- Early stopping
+- Data augmentation
+
+Our EEGNet (only 400 params) was TOO SMALL to overfit. That's why it
+generalised best.
+
+
+--- 10.9 WHAT'S A LOSS CURVE? ---
+
+A loss curve plots loss vs. training epoch. Usually TWO curves:
+train loss and validation loss.
+
+6 patterns to recognise:
+
+1. HEALTHY FIT: both decrease, plateau near each other. Small gap.
+
+2. OVERFITTING: train decreases, CV rises after some epoch. Gap
+   grows. Model is memorising.
+
+3. UNDERFITTING: both plateau at high values. Model lacks capacity
+   or signal is too weak.
+
+4. LR TOO HIGH: losses oscillate or diverge. Reduce learning rate.
+
+5. CLASS COLLAPSE: loss drops briefly, flatlines. All predictions =
+   majority class.
+
+6. PATHOLOGICAL NOISY CV: CV oscillates wildly while train smooths.
+   CV set too small or model too variable.
+
+Learn to read these patterns — they tell you what's wrong and what
+to try next.
+
+
+===============================================================================
+PART 11 — DEEP LEARNING ARCHITECTURES
+===============================================================================
+
+--- 11.1 WHAT'S A CNN? ---
+
+CNN = Convolutional Neural Network.
+
+Built around the CONVOLUTION operation (11.2). Originally designed
+for images (where the same feature can appear anywhere in the
+image), but also works great for time series (where the same pattern
+can appear at any time).
+
+Structure:
+- Convolutional layers extract LOCAL features
+- Pooling layers reduce resolution
+- Final dense layer(s) make the classification decision
+
+Why CNNs work:
+- TRANSLATION INVARIANCE: a pattern is detected no matter where it
+  appears
+- PARAMETER SHARING: the same filter is applied everywhere, so fewer
+  parameters than fully-connected
+- HIERARCHICAL: early layers detect simple patterns, later layers
+  detect complex ones
+
+
+--- 11.2 WHAT'S A CONVOLUTION? ---
+
+A convolution slides a small FILTER (also called a kernel) across the
+input, computing a weighted sum at each position.
+
+For 1D (time series):
+  output[t] = sum over k of (filter[k] × input[t+k])
+
+The filter has a fixed number of weights (e.g., 5). These weights
+are LEARNED during training.
+
+Each filter learns to detect one pattern. Multiple filters (say, 32)
+detect 32 different patterns.
+
+Analogy: a filter is like a template. Sliding it along the signal
+measures how much each location "looks like" the template.
+
+In CNN-LSTM, we use Conv1D with kernel size 5, covering about 40 ms
+of signal. Each filter is a learned time-frequency pattern.
+
+
+--- 11.3 WHAT'S AN LSTM? ---
+
+LSTM = Long Short-Term Memory. A type of Recurrent Neural Network
+(RNN).
+
+RNNs process sequences one step at a time, maintaining a HIDDEN STATE
+that summarises past information.
+
+Problem with vanilla RNNs: gradients vanish over long sequences, so
+the network can't remember distant events.
+
+LSTM solution: use a CELL STATE that flows through time with minimal
+disturbance, regulated by three GATES:
+- Forget gate: decides what to erase from the cell
+- Input gate: decides what to add
+- Output gate: decides what to output
+
+Equations:
+  f_t = sigmoid(W_f · [h_{t-1}, x_t] + b_f)    forget gate
+  i_t = sigmoid(W_i · [h_{t-1}, x_t] + b_i)    input gate
+  C_t = f_t × C_{t-1} + i_t × tanh(...)        update cell
+  o_t = sigmoid(W_o · [h_{t-1}, x_t] + b_o)    output gate
+  h_t = o_t × tanh(C_t)                        hidden output
+
+BIDIRECTIONAL LSTM: runs two LSTMs — one forward, one backward —
+combines their outputs. Uses both past AND future context. Useful
+for classification tasks where the full sequence is known.
+
+Our LSTM: 2 stacked BiLSTM layers, 64 hidden units each. 200k
+parameters. Overfit badly on our small dataset.
+
+
+--- 11.4 WHAT'S A CNN-LSTM? ---
+
+A hybrid: CNN layers first, then LSTM layers.
+
+Idea:
+- CNN extracts LOCAL features (e.g., short oscillatory bursts)
+- LSTM models the SEQUENCE of those features
+
+Standard for speech recognition (CNN → LSTM → CTC) and many biosignal
+tasks.
+
+Our CNN-LSTM:
+- Conv1D(32 filters, kernel 5) → ReLU → MaxPool
+- Conv1D(64 filters, kernel 3) → ReLU → MaxPool
+- BiLSTM(64 hidden) → Dropout → Dense
+
+~150k parameters. Macro-F1 = 0.4837. Rank 2 overall. Jumping from
+plain LSTM (0.42) shows that local feature extraction helps
+significantly.
+
+
+--- 11.5 WHAT'S A TRANSFORMER? ---
+
+Transformer = a neural network architecture based on ATTENTION,
+published in 2017 ("Attention Is All You Need").
+
+Core idea: every position in the sequence can directly "attend to"
+every other position, without having to propagate information
+sequentially like in an RNN.
+
+Advantages:
+- Captures LONG-RANGE dependencies easily
+- Parallelisable (unlike RNNs, which are sequential)
+- Scales well with data size
+
+Basic structure:
+- Input is embedded into a vector space
+- POSITIONAL ENCODING is added so the model knows token order
+- SELF-ATTENTION layer (see 11.6) mixes tokens
+- Feedforward layer applies non-linearity per position
+- Stack these blocks N times
+- Classification head at the end
+
+Used in BERT, GPT, and modern language models.
+
+Our EEG Transformer: 80k params, 3 encoder layers. COLLAPSED on our
+small dataset. Attention is data-hungry.
+
+
+--- 11.6 WHAT'S SELF-ATTENTION? ---
+
+Self-attention lets each position in a sequence look at EVERY OTHER
+position and decide what to focus on.
+
+Mechanism:
+1. Each token gets transformed into three vectors: Query (Q), Key
+   (K), and Value (V). These are learned linear projections.
+2. For each token, compute similarity (dot product) between its Q
+   and the K of every other token. These become the ATTENTION WEIGHTS.
+3. Each token's output is a weighted sum of all V vectors, using the
+   attention weights.
+
+Formula:
+  Attention(Q, K, V) = softmax(Q·K^T / √d_k) · V
+
+MULTI-HEAD ATTENTION: run attention H times in parallel with
+different projections, concatenate results. Allows the model to attend
+to different aspects simultaneously.
+
+Typical config in our EEG Transformer: 4 heads, embed dim 32,
+feedforward dim 128.
+
+Why it failed here: self-attention requires LOTS of data to learn
+useful query/key projections. With only 9,500 training samples and
+80k parameters, the model couldn't discover the right attention
+patterns.
+
+
+--- 11.7 WHAT'S EEGNET? ---
+
+EEGNet is a compact CNN designed specifically for EEG, published by
+Lawhern et al. in 2018. Uses DEPTHWISE and SEPARABLE CONVOLUTIONS to
+keep parameter count extremely low.
+
+Architecture (3 blocks):
+
+Block 1 (temporal filtering):
+  Conv2D(kernel=1×64, filters=8) → BatchNorm
+  Learns 8 filters in TIME only. Like a learned band-pass for each
+  filter.
+
+Block 2 (spatial filtering):
+  DepthwiseConv2D(kernel=14×1, depth_mult=2) → BN → ELU →
+  AvgPool(1×4) → Dropout
+  Learns how to combine channels. DEPTHWISE = one filter per input
+  channel, no channel-mixing.
+
+Block 3 (separable conv):
+  SeparableConv2D(kernel=1×16) → BN → ELU → AvgPool(1×8) → Dropout
+  → Dense(2)
+
+Total parameters: ONLY ~400.
+
+Why it won on our data:
+- Too few parameters to overfit
+- Inductive bias matches EEG physics
+- Temporal filter = learned band-pass
+- Spatial filter = learned electrode weighting
+
+EEGNet is the canonical "default choice" for EEG classification on
+small/medium datasets.
+
+
+--- 11.8 WHAT'S DEPTHWISE CONVOLUTION? ---
+
+Standard Conv2D: a filter looks at ALL input channels and produces
+ONE output channel. Many filters produce many output channels. Lots
+of parameters.
+
+Depthwise Conv2D: each input channel gets its OWN filter. No
+channel-mixing. Fewer parameters.
+
+DepthMultiplier D: each input channel can have D filters (still no
+cross-channel mixing). Output has D × input_channels.
+
+Separable Conv = Depthwise + Pointwise (1×1) convolution. First
+depthwise filters each channel independently, then pointwise mixes
+channels. This combo has ~10× fewer parameters than a regular
+convolution but nearly equivalent expressive power.
+
+Used in MobileNet (for mobile ML) and EEGNet.
+
+
+--- 11.9 WHAT'S PATCHTST? ---
+
+PatchTST = Patch-based Time Series Transformer. Published in 2023 by
+Nie et al., originally for long-horizon forecasting.
+
+Key innovation: instead of having a token for each TIME STEP (which
+would scale badly with sequence length), have a token for each PATCH
+(a short window of consecutive time steps).
+
+Our "Lite" version:
+- Input (64 samples, 14 channels) → 15 patches of 8 samples each,
+  stride 4 (50% overlap)
+- Each patch linearly embedded into a 32-dim token
+- Add positional encoding, prepend CLS token
+- Apply 2 Transformer encoder layers
+- Classification head
+
+Why patching helps:
+- Attention complexity drops from O(L²) to O((L/P)²) where L is
+  sequence length and P is patch size
+- Each patch already contains local temporal pattern, easier for
+  attention to reason about
+
+Our result: low Macro-F1 (0.28) but near-zero false negatives.
+Predicts "closed" aggressively. Good for safety-critical applications
+where missing a closed-eye event is catastrophic.
+
+
+===============================================================================
+PART 12 — PUTTING IT ALL TOGETHER
+===============================================================================
+
+--- 12.1 WHY IS THIS DATASET HARD? ---
+
+Five reasons in order of severity:
+
+1. TEMPORAL CONCEPT DRIFT: the class distribution changes dramatically
+   across the recording. Last 15% is only 8% closed.
+
+2. WEAK PHYSIOLOGICAL SIGNAL: alpha ratio closed/open is only 1.13
+   versus literature 2-5×. The Berger effect we should be exploiting
+   is muted.
+
+3. SMALL DATASET: 9,500-10,500 training samples is small for modern
+   deep learning.
+
+4. CONSUMER-GRADE HARDWARE: Emotiv EPOC has lower signal-to-noise
+   than research-grade EEG.
+
+5. SINGLE SUBJECT: no cross-subject variation in training. Results
+   don't generalise beyond this one recording.
+
+
+--- 12.2 WHY DID EEGNET WIN? ---
+
+EEGNet won for three reasons:
+
+1. EXTREMELY SMALL (~400 params): physically cannot overfit 9,500
+   training samples. Regularisation by architecture.
+
+2. DOMAIN-SPECIFIC INDUCTIVE BIAS: depthwise temporal filters act as
+   learned band-passes per channel. Depthwise spatial filters learn
+   optimal electrode weightings. This matches EEG physics.
+
+3. NATURALLY CALIBRATED THRESHOLDS: optimal threshold ~0.65, close
+   to the ideal 0.5. Means the decision boundary GENERALISES rather
+   than being hacked in place by post-hoc tuning.
+
+Key lesson: when data is limited, inductive bias beats brute-force
+capacity. 400 parameters with the right structure beat 200,000
+without.
+
+
+--- 12.3 WHY DID TRANSFORMER FAIL? ---
+
+The EEG Transformer collapsed to predicting only the majority class.
+Macro-F1 stuck at 0.27 across all 25 epochs. Three reasons:
+
+1. DATA-HUNGRY ARCHITECTURE: Transformers need millions of samples
+   to learn useful attention patterns. We had 9,500.
+
+2. NO INDUCTIVE BIAS: unlike CNNs (translation invariance) or RNNs
+   (temporal order), Transformers are nearly assumption-free. Without
+   data, they can't find structure.
+
+3. WEAK SIGNAL: combined with a weak physiological signal, the
+   Transformer defaulted to the "easy solution": predict majority
+   class always.
+
+Remedies for future work:
+- PRE-TRAIN on large unlabelled EEG corpora (TUH, PhysioNet)
+- Add CONVOLUTIONAL FRONT-END to provide inductive bias
+- Use STRONGER REGULARISATION
+- DATA AUGMENTATION (mixup, time masking, channel masking)
+
+
+--- 12.4 WHAT WOULD YOU DO DIFFERENTLY? ---
+
+If we had unlimited time and budget:
+
+1. MORE DATA: record from multiple subjects over multiple sessions.
+   Aim for cross-subject validation.
+
+2. BETTER HARDWARE: research-grade EEG (gel electrodes, bipolar
+   montage) would likely triple the alpha signal strength.
+
+3. HANDLE DRIFT EXPLICITLY: use domain adaptation or online learning
+   to adapt to distribution shift at test time.
+
+4. PRE-TRAIN: use self-supervised learning on unlabelled EEG (e.g.,
+   contrastive learning, masked prediction) to learn generic
+   representations, then fine-tune on our task.
+
+5. ENSEMBLE: combine EEGNet + LogReg + PatchTST with weighted voting.
+   Each captures different aspects of the signal.
+
+6. EARLY STOPPING: save the model at the CV-loss minimum, not the
+   final epoch.
+
+7. HYPERPARAMETER SEARCH: systematic Bayesian optimisation over key
+   hyperparameters for each model.
+
+8. SCORE-BASED CALIBRATION: use isotonic regression or Platt scaling
+   to fix probability calibration after threshold tuning.
+
+9. INTERPRETABILITY: compute saliency maps / attention weights on
+   the best model to verify it's using physiologically meaningful
+   features, not artifacts.
+
+10. REPLICATE ON DIFFERENT DATASETS: test on BCI Competition IV or
+    PhysioNet's EEG-MMI dataset to confirm generalisation.
+
+
+===============================================================================
+END OF ELI5 GUIDE
+===============================================================================
+
+If you've read this far, you now understand — in plain language — every
+major concept, algorithm, and design decision in the EEG Eye State
+Classification project. You can explain to anyone:
+
+- What EEG is and why we care about it
+- How we cleaned the raw signal
+- Why we engineered the features we did
+- What each classical ML algorithm does and why it's suited for
+  certain situations
+- How deep learning architectures differ (CNN, LSTM, Transformer,
+  EEGNet)
+- Why EEGNet won and Transformer failed
+- What the limitations of our study are
+- What we'd do differently with more time
+
+That's your self-learning roadmap complete. Good luck with the
+presentation!
